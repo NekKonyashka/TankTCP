@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection.Metadata;
+using System.Runtime.Intrinsics.X86;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -107,38 +108,11 @@ namespace TankTCP
                 var end_points = _tank.GetEndPoints(_tank.PrevAngle, _tank.Position).ToList();
                 points.AddRange(end_points);
 
-                var dif_x = points[0].X - next_points[0].X;
-                var dif_y = points[0].Y - next_points[0].Y;
-
-                Debug.WriteLine($"{_tank.NextPosition.X} : {_tank.Position.X} ");
-                Debug.WriteLine($"{_tank.NextPosition.Y} : {_tank.Position.Y} ");
-
-
-                //foreach (var pos in points)
-                //{
-                    
-                //    if (IsCollider(
-                //        new Point(pos.X - dif_x,pos.Y),
-                //        point_min: obstacle.Position,
-                //        point_max: new Point(obstacle.Position.X + obstacle.Width,
-                //                            obstacle.Position.Y + obstacle.Height)
-                //        ))
-                //    {
-                //        _tank.ReturnX(dif_x);
-                //    }
-                //    if (IsCollider(
-                //        new Point(pos.X, pos.Y - dif_y),
-                //        point_min: obstacle.Position,
-                //        point_max: new Point(obstacle.Position.X + obstacle.Width,
-                //                            obstacle.Position.Y + obstacle.Height)
-                //        ))
-                //    {
-                //        _tank.ReturnY(dif_y);
-                //    }
-                //}
-
                 for(int i = 0;i < points.Count; i++)
                 {
+                    var dif_x = points[i].X - next_points[i].X;
+                    var dif_y = points[i].Y - next_points[i].Y;
+
                     if (IsCollider(
                         new Point(next_points[i].X - dif_x, points[i].Y),
                         point_min: obstacle.Position,
@@ -146,7 +120,15 @@ namespace TankTCP
                                             obstacle.Position.Y + obstacle.Height)
                         ))
                     {
-                        _tank.ReturnX(dif_x);
+
+                        if (input.IsPressed(Key.A) || input.IsPressed(Key.D))
+                        {
+                            _tank.MoveBackX(dif_x);
+                        }
+                        else
+                        {
+                            _tank.ReturnX();
+                        }
                     }
                     if (IsCollider(
                         new Point(next_points[i].X, points[i].Y - dif_y),
@@ -155,7 +137,16 @@ namespace TankTCP
                                             obstacle.Position.Y + obstacle.Height)
                         ))
                     {
-                        _tank.ReturnY(dif_y);
+
+                        if (input.IsPressed(Key.A) || input.IsPressed(Key.D))
+                        {
+                            _tank.MoveBackY(dif_y);
+                        }
+                        else
+                        {
+                            _tank.ReturnY();
+                        }
+                       
                     }
                 }
 
@@ -178,6 +169,73 @@ namespace TankTCP
                         }
                     }
                 }
+            }
+            CheckTankOffScreen(input);
+            CheckBulletsOffScreen(bullets);
+        }
+
+        private void CheckTankOffScreen(InputManager input)
+        {
+            var next_points = _tank.GetCorners(_tank.Angle, _tank.NextPosition).ToList();
+            var points = _tank.GetCorners(_tank.PrevAngle, _tank.Position).ToList();
+
+            for (int i = 0; i < points.Count; i++)
+            {
+                var dif_x = points[i].X - next_points[i].X;
+                var dif_y = points[i].Y - next_points[i].Y;
+
+                if (!IsCollider(
+                    new Point(next_points[i].X - dif_x, points[i].Y),
+                    point_min: new Point(0, 0),
+                    point_max: new Point(SystemParameters.WorkArea.Width,
+                                        SystemParameters.WorkArea.Height)
+                    ))
+                {
+
+                    if (input.IsPressed(Key.A) || input.IsPressed(Key.D))
+                    {
+                        _tank.MoveBackX(dif_x);
+                    }
+                    else
+                    {
+                        _tank.ReturnX();
+                    }
+                }
+                if (!IsCollider(
+                    new Point(next_points[i].X, points[i].Y - dif_y),
+                    point_min: new Point(0, 0),
+                    point_max: new Point(SystemParameters.WorkArea.Width,
+                                        SystemParameters.WorkArea.Height)
+                    ))
+                {
+
+                    if (input.IsPressed(Key.A) || input.IsPressed(Key.D))
+                    {
+                        _tank.MoveBackY(dif_y);
+                    }
+                    else
+                    {
+                        _tank.ReturnY();
+                    }
+
+                }
+            }
+        }
+
+        private void CheckBulletsOffScreen(List<Bullet> bullets)
+        {
+            foreach(var bullet in bullets)
+            {
+                if(!IsCollider(bullet.Position,
+                    point_min:new Point(0,0),
+                    point_max: new Point(SystemParameters.WorkArea.Width,
+                                        SystemParameters.WorkArea.Height)))
+                {
+                    _bullets.Remove(bullet);
+                    OnBulletDestroy?.Invoke(bullet);
+                }
+                    
+
             }
         }
 

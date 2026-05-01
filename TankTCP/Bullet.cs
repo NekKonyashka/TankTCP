@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Media.Media3D;
 using System.Windows.Shapes;
 
@@ -14,7 +15,8 @@ namespace TankTCP
 {
     public class Bullet
     {
-        private double _speed = 10;
+        private double _speed = 15;
+
         private double _angle;
         private Rectangle _object;
         public Rectangle Object => _object;
@@ -44,7 +46,8 @@ namespace TankTCP
                 Height = _height,
                 RenderTransformOrigin = new Point(0.5, 0.5),
                 RenderTransform = _rotateTransform,
-                Fill = Brushes.DarkOrange,
+                Fill = new ImageBrush(new BitmapImage(new Uri("./res/Bullet.png", UriKind.Relative))),
+                Stretch = Stretch.Fill
             };
         }
 

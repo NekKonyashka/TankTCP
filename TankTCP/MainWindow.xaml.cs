@@ -22,6 +22,9 @@ namespace TankTCP
         public MainWindow()
         {
             InitializeComponent();
+            WindowState = WindowState.Maximized;
+            Width = SystemParameters.WorkArea.Width;
+            Height = SystemParameters.WorkArea.Height;
             gameManager = new GameManager();
             inputManager = new InputManager();
 
@@ -61,6 +64,11 @@ namespace TankTCP
             GameCanvas.Children.Add(obst);
             Canvas.SetTop(obst, 200);
             Canvas.SetLeft(obst, 400);
+
+            var obst2 = gameManager.CreateObstacle(new Point(1000, 700));
+            GameCanvas.Children.Add(obst2);
+            Canvas.SetTop(obst2, 700);
+            Canvas.SetLeft(obst2, 1000);
         }
 
         private void GameManager_OnTankCreated(Tank obj)

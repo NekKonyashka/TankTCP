@@ -17,9 +17,11 @@ namespace TankTCP
     {
         public bool InMove = false;
         private double? _lastTimeShooting = null;
+
         private double _reloadTime = 1;
         private double _speed = 3.5;
         private double _rotationSpeed = 3;
+
         private Rectangle _object;
         public Rectangle Object => _object;
         private Point _position;
@@ -52,7 +54,6 @@ namespace TankTCP
                 Height = height,
                 RenderTransform = _rotateTransform,
                 RenderTransformOrigin = new Point(0.5,0.5),
-                //Fill = Brushes.Red,
                 Fill = new ImageBrush(new BitmapImage(new Uri("./res/RedTank.png", UriKind.Relative))),
                 Stretch = Stretch.Fill,
             };
@@ -120,12 +121,20 @@ namespace TankTCP
             Canvas.SetTop(Object, _position.Y);
         }
 
-        public void ReturnX(double dif_x)
+        public void ReturnX()
         {
             _nextPosition.X = _position.X;
         }
+        public void MoveBackX(double dif_x)
+        {
+            _nextPosition.X += dif_x;
+        }
+        public void MoveBackY(double dif_y)
+        {
+            _nextPosition.Y += dif_y;
+        }
 
-        public void ReturnY(double dif_y)
+        public void ReturnY()
         {
             _nextPosition.Y = _position.Y;
         }

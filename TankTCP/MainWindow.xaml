@@ -6,6 +6,9 @@
         xmlns:local="clr-namespace:TankTCP"
         mc:Ignorable="d"
         Title="MainWindow" Height="450" Width="800" KeyDown="GameWindow_KeyDown" KeyUp="GameWindow_KeyUp">
+    <Window.Background>
+        <ImageBrush ImageSource="/res/Background.jpg"/>
+    </Window.Background>
     <Canvas x:Name="GameCanvas">
 
     </Canvas>

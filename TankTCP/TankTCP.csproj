@@ -9,10 +9,18 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="res\Background.jpg" />
+    <None Remove="res\Bullet.png" />
     <None Remove="res\RedTank.png" />
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="res\Background.jpg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="res\Bullet.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="res\RedTank.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
