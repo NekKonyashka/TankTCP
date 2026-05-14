@@ -10,12 +10,16 @@
 
   <ItemGroup>
     <None Remove="res\Background.jpg" />
+    <None Remove="res\BlueTank.png" />
     <None Remove="res\Bullet.png" />
     <None Remove="res\RedTank.png" />
   </ItemGroup>
 
   <ItemGroup>
     <Content Include="res\Background.jpg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="res\BlueTank.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="res\Bullet.png">

@@ -6,10 +6,27 @@
         xmlns:local="clr-namespace:TankTCP"
         mc:Ignorable="d"
         Title="MainWindow" Height="450" Width="800" KeyDown="GameWindow_KeyDown" KeyUp="GameWindow_KeyUp">
-    <Window.Background>
-        <ImageBrush ImageSource="/res/Background.jpg"/>
-    </Window.Background>
-    <Canvas x:Name="GameCanvas">
+    <Grid>
+        <Canvas x:Name="GameCanvas">
+            <Canvas.Background>
+                <ImageBrush ImageSource="/res/Background.jpg"/>
+            </Canvas.Background>
+        </Canvas>
 
-    </Canvas>
+        <Grid x:Name="Menu" Background="White" Panel.ZIndex="5">
+            <Grid x:Name="Buttons">
+                <Button x:Name="ServerButton" Content="Host" Width="200" Height="100" HorizontalAlignment="Center" VerticalAlignment="Center" Canvas.Left="300" Canvas.Top="53" FontSize="48" FontFamily="Bradley Hand ITC" Click="ServerButton_Click" Margin="0,0,0,200"/>
+                <Button x:Name="ClientButton" Content="Client" Width="200" Height="100" Canvas.Left="300" Canvas.Top="294" FontSize="48" FontFamily="Bradley Hand ITC" HorizontalAlignment="Center" VerticalAlignment="Center" Click="ClientButton_Click" Margin="0,200,0,0"/>
+            </Grid>
+            <Grid x:Name="Waiting_Server" Visibility="Hidden">
+                <TextBlock x:Name="Players" TextWrapping="Wrap" Text="1" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="24" Margin="0,0,25,0"/>
+                <TextBlock TextWrapping="Wrap" Text="/ 2" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="24" Margin="25,0,0,0"/>
+                <TextBlock TextWrapping="Wrap" Text="Игроки:" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="24" Margin="0,0,0,100"/>
+                <Button x:Name="Start" Content="Начать" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,200,0,0" Width="100" Height="50" FontSize="18" IsEnabled="False" Click="Start_Click"/>
+            </Grid>
+            <Grid x:Name="Waiting_Client" Visibility="Hidden">
+                <TextBlock TextWrapping="Wrap" Text="Ждем..." HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="24" Margin="0,0,25,0"/>
+            </Grid>
+        </Grid>
+    </Grid>
 </Window>

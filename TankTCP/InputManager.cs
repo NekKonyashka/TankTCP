@@ -10,7 +10,7 @@ namespace TankTCP
     public class InputManager
     {
         private HashSet<Key> _keys;
-
+        public HashSet<Key> Pressed => _keys;
         public InputManager()
         {
             _keys = new HashSet<Key>();
