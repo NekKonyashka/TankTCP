@@ -105,8 +105,6 @@ namespace TankTCP
                     OnObjectCreated?.Invoke(bullet);
                 }
 
-                RemoteControl();
-
                 CheckCollisions(input);
 
                 _tank.Update();
