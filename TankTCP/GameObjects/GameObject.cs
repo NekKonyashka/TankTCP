@@ -10,6 +10,11 @@ using System.Windows.Shapes;
 
 namespace TankTCP
 {
+    public enum AttachType
+    {
+        Host,
+        Client
+    }
     public abstract class GameObject
     {
         protected Rectangle _object;
@@ -27,7 +32,10 @@ namespace TankTCP
         protected Point _nextPosition;
         public Point NextPosition => _nextPosition;
 
-        public GameObject(Point pos)
+        private AttachType _attachType;
+        public AttachType AttachType => _attachType;
+
+        public GameObject(Point pos,AttachType attachType)
         {
             _position = pos;
             _rotateTransform = new RotateTransform();
@@ -40,6 +48,8 @@ namespace TankTCP
                 Stretch = Stretch.Fill,
                 Tag = GameManager.random.Next()
             };
+
+            _attachType = attachType;
         }
 
         public abstract void Update();

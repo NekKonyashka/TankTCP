@@ -17,14 +17,13 @@ namespace TankTCP
     {
         public bool InMove = false;
         private double? _lastTimeShooting = null;
-
         private byte _health = 3;
-        private double _reloadTime = 0.2;
-        private double _speed = 3.5;
-        private double _rotationSpeed = 3;
+        private double _reloadTime = 2;
+        private double _speed = 1.5;
+        private double _rotationSpeed = 1.25;
         public double PrevAngle { get; private set; }
 
-        public Tank(Point pos,Brush fill) : base(pos)
+        public Tank(Point pos, AttachType attachType, Brush fill) : base(pos, attachType)
         {
             _width = 60;
             _height = 50;
@@ -77,7 +76,7 @@ namespace TankTCP
         {
             _lastTimeShooting = shootTime;
             var bullet_pos = new Point(Position.X + Width / 2 - 20 / 2, Position.Y + Height / 2 - 10 / 2);
-            var bullet = new Bullet(bullet_pos, Angle);
+            var bullet = new Bullet(bullet_pos, AttachType, Angle);
 
             return bullet;
         }

@@ -10,6 +10,7 @@ namespace TankTCP
 {
     public class CollisionDto
     {
+        //Неважно (пока что(возможно))
         public double Angle { get; set; }
         public Point CenterPos { get; set; }
         public Rectangle Rectangle { get; set; }

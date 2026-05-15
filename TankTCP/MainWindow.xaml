@@ -24,6 +24,11 @@
                 <TextBlock TextWrapping="Wrap" Text="Игроки:" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="24" Margin="0,0,0,100"/>
                 <Button x:Name="Start" Content="Начать" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,200,0,0" Width="100" Height="50" FontSize="18" IsEnabled="False" Click="Start_Click"/>
             </Grid>
+            <Grid x:Name="MenuOfInput" Visibility="Hidden">
+                <TextBox x:Name="Input" TextWrapping="Wrap" Width="150" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                <TextBlock TextWrapping="Wrap" Text="Введи IP хоста" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,100" FontSize="24"/>
+                <Button x:Name="ButtonOfInput" Content="Ввод" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,100,0,0" Width="50" Height="30" Click="ButtonOfInput_Click"/>
+            </Grid>
             <Grid x:Name="Waiting_Client" Visibility="Hidden">
                 <TextBlock TextWrapping="Wrap" Text="Ждем..." HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="24" Margin="0,0,25,0"/>
             </Grid>

@@ -15,9 +15,13 @@ namespace TankTCP
 {
     public class Bullet : GameObject
     {
-        private double _speed = 15;
-        public Bullet(Point pos, double angle) : base(pos)
+        private static int counter = 0;
+        private double _speed = 20;
+        private int _id;
+        public int Id => _id;
+        public Bullet(Point pos, AttachType attachType, double angle) : base(pos, attachType)
         {
+            _id = counter++;
             _width = 20;
             _height = 10;
             _rotateTransform.Angle = angle;
@@ -42,9 +46,10 @@ namespace TankTCP
             Canvas.SetTop(Object, _position.Y);
         }
 
-        public void Apply(double angle)
+        public void Apply(GameObjectDto dto)
         {
-            _rotateTransform.Angle = angle;
+            _rotateTransform.Angle = dto.Angle;
+            _position = dto.Position;
         }
     }
 }

@@ -12,7 +12,7 @@ namespace TankTCP
 {
     public class TcpManager
     {
-        private const string Ip = "127.0.0.1";
+        private string Ip;
         private const int Port = 8080;
 
         private IPEndPoint _tcpEndpoint;
@@ -28,14 +28,23 @@ namespace TankTCP
 
         public TcpManager()
         {
-            _tcpEndpoint = new IPEndPoint(IPAddress.Parse(Ip), Port);
             _socket = new Socket(AddressFamily.InterNetwork,SocketType.Stream, ProtocolType.Tcp);
         }
 
+        public bool TryIP(string ip)
+        {
+            if(IPEndPoint.TryParse(ip, out var temp))
+            {
+                Ip = ip;
+                return true;
+            }
+            return false;
+        }
         public async void Connect(bool IsClient)
         {
             if (IsClient)
             {
+                _tcpEndpoint = new IPEndPoint(IPAddress.Parse(Ip), Port);
                 await _socket.ConnectAsync(_tcpEndpoint);
                 _stream = new NetworkStream(_socket);
                 _streamReader = new StreamReader(_stream, Encoding.UTF8);
@@ -43,6 +52,7 @@ namespace TankTCP
             }
             else
             {
+                _tcpEndpoint = new IPEndPoint(IPAddress.Any, Port);
                 _socket.Bind(_tcpEndpoint);
                 _socket.Listen();
                 ServerAsync();

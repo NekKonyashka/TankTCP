@@ -27,11 +27,12 @@ namespace TankTCP
         private List<Bullet> _bullets;
         private List<Obstacle> _obstacles;
         private bool IsClient;
+        private string[] _remotedKeys = { };
 
         public event Action<GameObject> OnObjectCreated;
         public event Action<Bullet> OnBulletDestroy;
         public event Action<SendedDto> OnWorldSended;
-        public event Action<InputManager> OnTapToSend;
+        public event Action<InputManager,double,double> OnTapToSend;
 
         public GameManager()
         {
@@ -45,12 +46,14 @@ namespace TankTCP
         }
         public void SpawnTank(Point pos)
         {
-            _tank = new Tank(pos, new ImageBrush(new BitmapImage(new Uri("./res/RedTank.png", UriKind.Relative))));
+            _tank = new Tank(pos, AttachType.Host,
+                new ImageBrush(new BitmapImage(new Uri("./res/RedTank.png", UriKind.Relative))));
             OnObjectCreated?.Invoke(_tank);
         }
         public void SpawnEnemyTank(Point pos)
         {
-            _enemyTank = new Tank(pos, new ImageBrush(new BitmapImage(new Uri("./res/BlueTank.png", UriKind.Relative))));
+            _enemyTank = new Tank(pos, AttachType.Client,
+                new ImageBrush(new BitmapImage(new Uri("./res/BlueTank.png", UriKind.Relative))));
             OnObjectCreated?.Invoke(_enemyTank);
         }
         public Rectangle CreateObstacle(Point pos)
@@ -63,10 +66,10 @@ namespace TankTCP
 
         public void Update(InputManager input)
         {
+            _gameTime += _deltaTime;
+
             if (!IsClient)
             {
-                _gameTime += _deltaTime;
-
                 if (input.IsPressed(Key.W))
                 {
                     _tank.MoveForward();
@@ -105,9 +108,12 @@ namespace TankTCP
                     OnObjectCreated?.Invoke(bullet);
                 }
 
+                RemoteControl();
+
                 CheckCollisions(input);
 
                 _tank.Update();
+                _enemyTank.Update();
 
                 foreach (var bullet in _bullets)
                 {
@@ -118,36 +124,107 @@ namespace TankTCP
             }
             else
             {
-                OnTapToSend?.Invoke(input);
+                OnTapToSend?.Invoke(input,_gameTime,_deltaTime);
                 _tank.Update();
+                _enemyTank.Update();
+                foreach (var bullet in _bullets)
+                {
+                    bullet.Update();
+                }
+            }
+        }
+
+        public void SetRemoted(string[] keys)
+        {
+            _remotedKeys = keys;
+        }
+
+        public void RemoteControl()
+        {
+            if (_remotedKeys.Contains("W"))
+            {
+                _enemyTank.MoveForward();
+            }
+            if (_remotedKeys.Contains("S"))
+            {
+                _enemyTank.MoveBackward();
+            }
+            if (_remotedKeys.Contains("A"))
+            {
+                if (_remotedKeys.Contains("S"))
+                {
+                    _enemyTank.RotateRight();
+                }
+                else
+                {
+                    _enemyTank.RotateLeft();
+                }
+            }
+            if (_remotedKeys.Contains("D"))
+            {
+                if (_remotedKeys.Contains("S"))
+                {
+                    _enemyTank.RotateLeft();
+                }
+                else
+                {
+                    _enemyTank.RotateRight();
+                }
+            }
+            if (_remotedKeys.Contains("Space") && _enemyTank.CanShoot(_gameTime))
+            {
+                var bullet = _enemyTank.Shoot(_gameTime);
+                _bullets.Add(bullet);
+
+                OnObjectCreated?.Invoke(bullet);
             }
         }
 
 
         public void ApplyWorld(SendedDto dto)
         {
-            var tank = dto.gameObjects[0];
-            _tank.Apply(tank);
-            var enemyTank = dto.gameObjects[1];
-            _enemyTank.Apply(enemyTank);
+            foreach(var obj in dto.gameObjects)
+            {
+                if(obj.AttachType == AttachType.Host && obj.Type == GameObjectType.Tank)
+                {
+                    _tank.Apply(obj);
+                }
+                else if(obj.AttachType == AttachType.Client && obj.Type == GameObjectType.Tank)
+                {
+                    _enemyTank.Apply(obj);
+                }
+                else if(obj.Type == GameObjectType.Bullet)
+                {
+                    if(_bullets.Where(b => b.Id == obj.Id).FirstOrDefault() == null)
+                    {
+                        Bullet bullet = new Bullet(obj.Position, obj.AttachType, obj.Angle);
+                        _bullets.Add(bullet);
+                        bullet.Apply(obj);
+                        OnObjectCreated?.Invoke(bullet);
+                    }
+                }
+            }
         }
 
 
         private void SaveWorld()
         {
-
             GameObjectDto tank = new GameObjectDto()
             {
                 Position = _tank.Position,
                 Angle = _tank.Angle,
+                AttachType = _tank.AttachType,
                 Type = GameObjectType.Tank,
+                Id = -1
             };
             _worldState.gameObjects.Add(tank);
             GameObjectDto enemyTank = new GameObjectDto()
             {
                 Position = _enemyTank.Position,
                 Angle = _enemyTank.Angle,
+                AttachType = _enemyTank.AttachType,
                 Type = GameObjectType.Tank,
+                Id = -1
             };
             _worldState.gameObjects.Add(enemyTank);
             foreach ( var bullet in _bullets)
@@ -156,7 +233,9 @@ namespace TankTCP
                 {
                     Position = bullet.Position,
                     Angle = bullet.Angle,
+                    AttachType = bullet.AttachType,
                     Type = GameObjectType.Bullet,
+                    Id = bullet.Id
                 };
                 _worldState.gameObjects.Add(bulletDto);
             }

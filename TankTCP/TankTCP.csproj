@@ -12,6 +12,7 @@
     <None Remove="res\Background.jpg" />
     <None Remove="res\BlueTank.png" />
     <None Remove="res\Bullet.png" />
+    <None Remove="res\KAMEN.png" />
     <None Remove="res\RedTank.png" />
   </ItemGroup>
 
@@ -23,6 +24,9 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="res\Bullet.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="res\KAMEN.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="res\RedTank.png">

@@ -20,6 +20,7 @@ namespace TankTCP
         private GameManager gameManager;
         private TcpManager tcpManager;
         private InputManager inputManager;
+        private double _lastTimeSend = 0;
         public MainWindow()
         {
             InitializeComponent();
@@ -45,15 +46,16 @@ namespace TankTCP
 
         private void TcpManager_OnHostReceived(string[] obj)
         {
-
+            gameManager.SetRemoted(obj);
         }
 
-        private void GameManager_OnKeySend(InputManager obj)
+        private void GameManager_OnKeySend(InputManager obj,double time,double deltaTime)
         {
-            if(obj.Pressed.Count > 0)
+            if(time - _lastTimeSend >= deltaTime)
             {
                 var keys = obj.Pressed.Select(k => k.ToString()).ToArray();
                 tcpManager.SendRemoteKey(keys);
+                _lastTimeSend = time;
             }
         }
 
@@ -93,7 +95,8 @@ namespace TankTCP
             {
                 Canvas.SetZIndex(spawnObject, -1);
             }
-
+            UpdateLayout();
+            GameCanvas.UpdateLayout();
         }
 
         private void GameManager_OnBulletDestroy(Bullet obj)
@@ -127,9 +130,8 @@ namespace TankTCP
         }
         private void ClientButton_Click(object sender, RoutedEventArgs e)
         {
-            tcpManager.Connect(true);
             gameManager.SetState(true);
-            Waiting_Client.Visibility = Visibility.Visible;
+            MenuOfInput.Visibility = Visibility.Visible;
             Buttons.Visibility = Visibility.Hidden;
         }
 
@@ -156,6 +158,16 @@ namespace TankTCP
             tcpManager.StartGameAsync();
             Waiting_Server.Visibility = Visibility.Hidden;
             LoadGame();
+        }
+
+        private void ButtonOfInput_Click(object sender, RoutedEventArgs e)
+        {
+            if (!string.IsNullOrEmpty(Input.Text) && tcpManager.TryIP(Input.Text))
+            {
+                MenuOfInput.Visibility = Visibility.Hidden;
+                Waiting_Client.Visibility = Visibility.Visible;
+                tcpManager.Connect(true);
+            }
         }
     }
 }

@@ -16,6 +16,10 @@ namespace TankTCP
     {
         public Point Position { get; set; }
         public double Angle { get; set; }
+
+        public AttachType AttachType { get; set; }
         public GameObjectType Type { get; set; }
+
+        public int Id { get; set; }
     }
 }
