@@ -14,7 +14,12 @@
         </Canvas>
 
         <Grid x:Name="Menu" Background="White" Panel.ZIndex="5">
-            <Grid x:Name="Buttons">
+            <Grid x:Name="Name">
+                <TextBlock TextWrapping="Wrap" Text="Введите свое имя:" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,100" FontSize="20"/>
+                <TextBox x:Name="NameInput" TextWrapping="Wrap" Width="120" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                <Button x:Name="NameEnter" Content="Button" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,100,0,0" Click="NameEnter_Click"/>
+            </Grid>
+            <Grid x:Name="Buttons" Visibility="Hidden">
                 <Button x:Name="ServerButton" Content="Host" Width="200" Height="100" HorizontalAlignment="Center" VerticalAlignment="Center" Canvas.Left="300" Canvas.Top="53" FontSize="48" FontFamily="Bradley Hand ITC" Click="ServerButton_Click" Margin="0,0,0,200"/>
                 <Button x:Name="ClientButton" Content="Client" Width="200" Height="100" Canvas.Left="300" Canvas.Top="294" FontSize="48" FontFamily="Bradley Hand ITC" HorizontalAlignment="Center" VerticalAlignment="Center" Click="ClientButton_Click" Margin="0,200,0,0"/>
             </Grid>
@@ -31,6 +36,12 @@
             </Grid>
             <Grid x:Name="Waiting_Client" Visibility="Hidden">
                 <TextBlock TextWrapping="Wrap" Text="Ждем..." HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="24" Margin="0,0,25,0"/>
+            </Grid>
+            <Grid x:Name="DefeatAndWInGrid" Visibility="Hidden">
+                <TextBlock TextWrapping="Wrap" Text="ИГРА ОКОНЧЕНА" Margin="0,0,0,200" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="18"/>
+                <Button x:Name="RestartButton" Content="Restart" HorizontalAlignment="Center" VerticalAlignment="Center" Width="75" Height="75" Click="RestartButton_Click"/>
+                <TextBlock TextWrapping="Wrap" Text="Победил:" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="18" Margin="0,0,100,150"/>
+                <TextBlock x:Name="WInnerName" TextWrapping="Wrap" HorizontalAlignment="Left" VerticalAlignment="Top" FontSize="18" Margin="399,120,0,0"/>
             </Grid>
         </Grid>
     </Grid>

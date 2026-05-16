@@ -21,10 +21,11 @@ namespace TankTCP
         private NetworkStream _stream;
         private StreamReader _streamReader;
 
-        public event Action OnPlayerConnected;
+        public event Action<string> OnPlayerConnected;
         public event Action OnGameStart;
         public event Action<SendedDto> OnClientReceived;
         public event Action<string[]> OnHostReceived;
+        public event Action<AttachType,string> OnTankDestroyed;
 
         public TcpManager()
         {
@@ -55,7 +56,7 @@ namespace TankTCP
                 _tcpEndpoint = new IPEndPoint(IPAddress.Any, Port);
                 _socket.Bind(_tcpEndpoint);
                 _socket.Listen();
-                ServerAsync();
+                ServerWaitingAsync();
             }
         }
 
@@ -68,10 +69,6 @@ namespace TankTCP
 
         public async void ServerAsync()
         {
-            _clientSocket = await _socket.AcceptAsync();
-            OnPlayerConnected?.Invoke();
-            _stream = new NetworkStream(_clientSocket);
-            _streamReader = new StreamReader(_stream, Encoding.UTF8);
             while (true)
             {
                 string json = await _streamReader.ReadLineAsync();
@@ -80,7 +77,20 @@ namespace TankTCP
                     string[] keys = JsonSerializer.Deserialize<string[]>(json);
                     OnHostReceived?.Invoke(keys);
                 }
+            }
+        }
 
+        public async void ServerWaitingAsync()
+        {
+            _clientSocket = await _socket.AcceptAsync();
+            _stream = new NetworkStream(_clientSocket);
+            _streamReader = new StreamReader(_stream, Encoding.UTF8);
+            string json = await _streamReader.ReadLineAsync();
+            if (json != null)
+            {
+                string name = JsonSerializer.Deserialize<string>(json);
+                OnPlayerConnected?.Invoke(name);
+                ServerAsync();
             }
         }
 
@@ -93,7 +103,14 @@ namespace TankTCP
                 if (json != null)
                 {
                     SendedDto dto = JsonSerializer.Deserialize<SendedDto>(json);
-                    OnClientReceived?.Invoke(dto);
+                    if (dto?.gameObjects[0].Id == -67)
+                    {
+                        OnTankDestroyed?.Invoke(dto.gameObjects[0].AttachType, dto.gameObjects[0].UserName);
+                    }
+                    else
+                    {
+                        OnClientReceived?.Invoke(dto);
+                    }
                 }
 
             }
@@ -123,6 +140,19 @@ namespace TankTCP
             await _socket.SendAsync(data);
         }
 
+        public async void SendTankDestroyMessage(SendedDto attachType)
+        {
+            string type = JsonSerializer.Serialize(attachType);
+            byte[] data = Encoding.UTF8.GetBytes(type + "\n");
+            await _clientSocket.SendAsync(data);
+        }
+
+        public async void SendName(string name)
+        {
+            string json = JsonSerializer.Serialize(name);
+            byte[] data = Encoding.UTF8.GetBytes(json + "\n");
+            await _socket.SendAsync(data);
+        }
     }
 
 }

@@ -21,5 +21,9 @@ namespace TankTCP
         public GameObjectType Type { get; set; }
 
         public int Id { get; set; }
+
+        public byte Health { get; set; }
+
+        public string UserName { get; set; }
     }
 }

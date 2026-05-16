@@ -12,8 +12,10 @@
     <None Remove="res\Background.jpg" />
     <None Remove="res\BlueTank.png" />
     <None Remove="res\Bullet.png" />
+    <None Remove="res\dead.wav" />
     <None Remove="res\KAMEN.png" />
     <None Remove="res\RedTank.png" />
+    <None Remove="res\shoot.wav" />
   </ItemGroup>
 
   <ItemGroup>
@@ -26,10 +28,16 @@
     <Content Include="res\Bullet.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="res\dead.wav">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="res\KAMEN.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="res\RedTank.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="res\shoot.wav">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

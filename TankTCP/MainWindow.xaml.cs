@@ -17,9 +17,12 @@ namespace TankTCP
     /// </summary>
     public partial class MainWindow : Window
     {
+        private string _username;
+        private string _clientName;
         private GameManager gameManager;
         private TcpManager tcpManager;
         private InputManager inputManager;
+        private SoundManager soundManager;
         private double _lastTimeSend = 0;
         public MainWindow()
         {
@@ -32,16 +35,44 @@ namespace TankTCP
             gameManager = new GameManager();
             inputManager = new InputManager();
             tcpManager = new TcpManager();
+            soundManager = new SoundManager();
 
             gameManager.OnObjectCreated += GameManager_OnObjectCreated;
-            gameManager.OnBulletDestroy += GameManager_OnBulletDestroy;
+            gameManager.OnGameObjectDestroy += GameManager_OnGameObjectDestroy;
             gameManager.OnWorldSended += GameManager_OnSended;
             gameManager.OnTapToSend += GameManager_OnKeySend;
+            gameManager.OnTankDestroy += GameManager_OnTankDestroy;
 
             tcpManager.OnPlayerConnected += TcpManager_OnPlayerConnected;
             tcpManager.OnGameStart += TcpManager_OnGameStart;
             tcpManager.OnClientReceived += TcpManager_OnClientReceived;
             tcpManager.OnHostReceived += TcpManager_OnHostReceived;
+            tcpManager.OnTankDestroyed += TcpManager_OnTankDestroyed;
+
+            NameInput.Text = "Аноним" + new Random().Next();
+        }
+
+
+        private void GameManager_OnTankDestroy(SendedDto obj)
+        {
+            string name = obj.gameObjects[0].AttachType == AttachType.Client ?  _username : _clientName;
+            obj.gameObjects[0].UserName = name;
+            tcpManager.SendTankDestroyMessage(obj);
+            EndGame(name);
+        }
+
+        private void EndGame(string username)
+        {
+            soundManager.DoAction(SoundAction.Destroy);
+            Menu.Visibility = Visibility.Visible;
+            DefeatAndWInGrid.Visibility = Visibility.Visible;
+            WInnerName.Text = username;
+        }
+
+        private void TcpManager_OnTankDestroyed(AttachType obj,string name)
+        {
+            gameManager.Destroy(obj);
+            EndGame(name);
         }
 
         private void TcpManager_OnHostReceived(string[] obj)
@@ -75,8 +106,9 @@ namespace TankTCP
             LoadGame();
         }
 
-        private void TcpManager_OnPlayerConnected()
+        private void TcpManager_OnPlayerConnected(string name)
         {
+            _clientName = name;
             Players.Text = "2";
             Start.IsEnabled = true;
         }
@@ -94,12 +126,13 @@ namespace TankTCP
             else
             {
                 Canvas.SetZIndex(spawnObject, -1);
+                soundManager.DoAction(SoundAction.Shoot);
             }
             UpdateLayout();
             GameCanvas.UpdateLayout();
         }
 
-        private void GameManager_OnBulletDestroy(Bullet obj)
+        private void GameManager_OnGameObjectDestroy(GameObject obj)
         {
             GameCanvas.Children.Remove(obj.Object);
         }
@@ -160,13 +193,30 @@ namespace TankTCP
             LoadGame();
         }
 
-        private void ButtonOfInput_Click(object sender, RoutedEventArgs e)
+        private async void ButtonOfInput_Click(object sender, RoutedEventArgs e)
         {
             if (!string.IsNullOrEmpty(Input.Text) && tcpManager.TryIP(Input.Text))
             {
                 MenuOfInput.Visibility = Visibility.Hidden;
                 Waiting_Client.Visibility = Visibility.Visible;
                 tcpManager.Connect(true);
+                tcpManager.SendName(_username);
+            }
+        }
+
+        private void RestartButton_Click(object sender, RoutedEventArgs e)
+        {
+            GameCanvas.Children.Clear();
+            LoadGame();
+        }
+
+        private void NameEnter_Click(object sender, RoutedEventArgs e)
+        {
+            if (!string.IsNullOrEmpty(NameInput.Text))
+            {
+                _username = NameInput.Text;
+                Name.Visibility = Visibility.Hidden;
+                Buttons.Visibility = Visibility.Visible;
             }
         }
     }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection.Metadata;
 using System.Runtime.Intrinsics.X86;
 using System.Text;
@@ -26,13 +27,14 @@ namespace TankTCP
         private Tank _enemyTank;
         private List<Bullet> _bullets;
         private List<Obstacle> _obstacles;
-        private bool IsClient;
+        public bool IsClient { get; private set; }
         private string[] _remotedKeys = { };
 
         public event Action<GameObject> OnObjectCreated;
-        public event Action<Bullet> OnBulletDestroy;
+        public event Action<GameObject> OnGameObjectDestroy;
         public event Action<SendedDto> OnWorldSended;
         public event Action<InputManager,double,double> OnTapToSend;
+        public event Action<SendedDto> OnTankDestroy;
 
         public GameManager()
         {
@@ -204,6 +206,30 @@ namespace TankTCP
                     }
                 }
             }
+            //Короче тут проходит по списку текущих пуль и каждую пулю передает в перебор списка состояния объектов от сервера,
+            //у который тип Bullet.А далее сравнивается айди переданной пули со всеми пулями сервера и если количество
+            //совпадений равно 0, то пуля на серваке уже не существует и поэтому она удаляется у клиента.
+            
+            var deletedBullets = _bullets.Where(b => dto.gameObjects.Where(
+                obj => obj.Type == GameObjectType.Bullet && b.Id == obj.Id).Count() == 0).ToList();
+            foreach(var bullet in deletedBullets)
+            {
+                _bullets.Remove(bullet);
+                OnGameObjectDestroy?.Invoke(bullet);
+            }
+        }
+
+
+        public void Destroy(AttachType attachType)
+        {
+            if(attachType == AttachType.Client)
+            {
+                OnGameObjectDestroy?.Invoke(_enemyTank);
+            }
+            else
+            {
+                OnGameObjectDestroy?.Invoke(_tank);
+            }
         }
 
 
@@ -215,7 +241,8 @@ namespace TankTCP
                 Angle = _tank.Angle,
                 AttachType = _tank.AttachType,
                 Type = GameObjectType.Tank,
-                Id = -1
+                Id = -1,
+                Health = _tank.Health
             };
             _worldState.gameObjects.Add(tank);
             GameObjectDto enemyTank = new GameObjectDto()
@@ -224,7 +251,8 @@ namespace TankTCP
                 Angle = _enemyTank.Angle,
                 AttachType = _enemyTank.AttachType,
                 Type = GameObjectType.Tank,
-                Id = -1
+                Id = -1,
+                Health = _enemyTank.Health
             };
             _worldState.gameObjects.Add(enemyTank);
             foreach ( var bullet in _bullets)
@@ -243,60 +271,93 @@ namespace TankTCP
             _worldState.gameObjects.Clear();
         }
 
+        private void TankObstacleCollision(Tank tank,Obstacle obstacle,InputManager input)
+        {
+            var next_points = tank.GetCorners(tank.Angle, tank.NextPosition).ToList();
+            var next_end_points = tank.GetEndPoints(tank.Angle, tank.NextPosition);
+            next_points.AddRange(next_end_points);
+
+            var points = tank.GetCorners(tank.PrevAngle, tank.Position).ToList();
+            var end_points = tank.GetEndPoints(tank.PrevAngle, tank.Position).ToList();
+            points.AddRange(end_points);
+
+            for (int i = 0; i < points.Count(); i++)
+            {
+                var dif_x = points[i].X - next_points[i].X;
+                var dif_y = points[i].Y - next_points[i].Y;
+
+                if (IsCollider(
+                    new Point(next_points[i].X - dif_x, points[i].Y),
+                    point_min: obstacle.Position,
+                    point_max: new Point(obstacle.Position.X + obstacle.Width,
+                                        obstacle.Position.Y + obstacle.Height)
+                    ))
+                {
+
+                    if (input.IsPressed(Key.A) || input.IsPressed(Key.D))
+                    {
+                        tank.MoveBackX(dif_x);
+                    }
+                    else
+                    {
+                        tank.ReturnX();
+                    }
+
+                }
+                if (IsCollider(
+                    new Point(next_points[i].X, points[i].Y - dif_y),
+                    point_min: obstacle.Position,
+                    point_max: new Point(obstacle.Position.X + obstacle.Width,
+                                        obstacle.Position.Y + obstacle.Height)
+                    ))
+                {
+
+                    if (input.IsPressed(Key.A) || input.IsPressed(Key.D))
+                    {
+                        tank.MoveBackY(dif_y);
+                    }
+                    else
+                    {
+                        tank.ReturnY();
+                    }
+                }
+            }
+        }
+
+        private void TankBulletCollision(Tank tank,Bullet bullet)
+        {
+            foreach (var pos in bullet.GetCorners(bullet.Angle, bullet.Position))
+            {
+                if (IsCollider(bullet.Position,
+                    point_min: tank.Position,
+                    point_max: new Point(tank.Position.X + tank.Width,
+                                        tank.Position.Y + tank.Height)
+                    ) && bullet.AttachType != tank.AttachType)
+                {
+                    _bullets.Remove(bullet);
+                    OnGameObjectDestroy?.Invoke(bullet);
+                    tank.Hit();
+                    if(tank.Health == 0)
+                    {
+                        OnGameObjectDestroy?.Invoke(tank);
+                        OnTankDestroy?.Invoke(new SendedDto()
+                        {
+                            gameObjects = { new GameObjectDto() { Id = -67, AttachType = tank.AttachType} }
+                        });
+                    }
+                    break;
+                }
+            }
+        }
+
         private void CheckCollisions(InputManager input)
         {
             foreach(var obstacle in _obstacles)
             {
-                var next_points = _tank.GetCorners(_tank.Angle, _tank.NextPosition).ToList();
-                var next_end_points = _tank.GetEndPoints(_tank.Angle, _tank.NextPosition);
-                next_points.AddRange(next_end_points);
-
-                var points = _tank.GetCorners(_tank.PrevAngle, _tank.Position).ToList();
-                var end_points = _tank.GetEndPoints(_tank.PrevAngle, _tank.Position).ToList();
-                points.AddRange(end_points);
-
-                for (int i = 0; i < points.Count(); i++)
-                {
-                    var dif_x = points[i].X - next_points[i].X;
-                    var dif_y = points[i].Y - next_points[i].Y;
-
-                    if (IsCollider(
-                        new Point(next_points[i].X - dif_x, points[i].Y),
-                        point_min: obstacle.Position,
-                        point_max: new Point(obstacle.Position.X + obstacle.Width,
-                                            obstacle.Position.Y + obstacle.Height)
-                        ))
-                    {
-
-                        if (input.IsPressed(Key.A) || input.IsPressed(Key.D))
-                        {
-                            _tank.MoveBackX(dif_x);
-                        }
-                        else
-                        {
-                            _tank.ReturnX();
-                        }
-
-                    }
-                    if (IsCollider(
-                        new Point(next_points[i].X, points[i].Y - dif_y),
-                        point_min: obstacle.Position,
-                        point_max: new Point(obstacle.Position.X + obstacle.Width,
-                                            obstacle.Position.Y + obstacle.Height)
-                        ))
-                    {
-
-                        if (input.IsPressed(Key.A) || input.IsPressed(Key.D))
-                        {
-                            _tank.MoveBackY(dif_y);
-                        }
-                        else
-                        {
-                            _tank.ReturnY();
-                        }
-                    }
-                }
+                TankObstacleCollision(_tank, obstacle,input);
+                TankObstacleCollision(_enemyTank, obstacle, input);
             }
+
             var bullets = _bullets.ToList();
             foreach(var obstacle in _obstacles)
             {
@@ -311,19 +372,29 @@ namespace TankTCP
                             ))
                         {
                             _bullets.Remove(bullet);
-                            OnBulletDestroy?.Invoke(bullet);
+                            OnGameObjectDestroy?.Invoke(bullet);
+                            break;
                         }
                     }
                 }
             }
-            CheckTankOffScreen(input);
+
+            foreach(var bullet in bullets)
+            {
+                TankBulletCollision(_tank, bullet);
+                TankBulletCollision(_enemyTank, bullet);
+            }
+
+
+            CheckTankOffScreen(_tank,input);
+            CheckTankOffScreen(_enemyTank, input);
             CheckBulletsOffScreen(bullets);
         }
 
-        private void CheckTankOffScreen(InputManager input)
+        private void CheckTankOffScreen(Tank tank,InputManager input)
         {
-            var next_points = _tank.GetCorners(_tank.Angle, _tank.NextPosition).ToList();
-            var points = _tank.GetCorners(_tank.PrevAngle, _tank.Position).ToList();
+            var next_points = tank.GetCorners(tank.Angle, tank.NextPosition).ToList();
+            var points = tank.GetCorners(tank.PrevAngle, tank.Position).ToList();
 
             for (int i = 0; i < points.Count; i++)
             {
@@ -340,11 +411,11 @@ namespace TankTCP
 
                     if (input.IsPressed(Key.A) || input.IsPressed(Key.D))
                     {
-                        _tank.MoveBackX(dif_x);
+                        tank.MoveBackX(dif_x);
                     }
                     else
                     {
-                        _tank.ReturnX();
+                        tank.ReturnX();
                     }
                 }
                 if (!IsCollider(
@@ -357,11 +428,11 @@ namespace TankTCP
 
                     if (input.IsPressed(Key.A) || input.IsPressed(Key.D))
                     {
-                        _tank.MoveBackY(dif_y);
+                        tank.MoveBackY(dif_y);
                     }
                     else
                     {
-                        _tank.ReturnY();
+                        tank.ReturnY();
                     }
 
                 }
@@ -378,7 +449,7 @@ namespace TankTCP
                                         SystemParameters.WorkArea.Height)))
                 {
                     _bullets.Remove(bullet);
-                    OnBulletDestroy?.Invoke(bullet);
+                    OnGameObjectDestroy?.Invoke(bullet);
                 }
                     
 

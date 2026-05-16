@@ -18,10 +18,11 @@ namespace TankTCP
         public bool InMove = false;
         private double? _lastTimeShooting = null;
         private byte _health = 3;
-        private double _reloadTime = 2;
+        private double _reloadTime = 5;
         private double _speed = 1.5;
         private double _rotationSpeed = 1.25;
         public double PrevAngle { get; private set; }
+        public byte Health => _health;
 
         public Tank(Point pos, AttachType attachType, Brush fill) : base(pos, attachType)
         {
@@ -99,6 +100,7 @@ namespace TankTCP
         {
             _nextPosition = dto.Position;
             _rotateTransform.Angle = dto.Angle;
+            _health = dto.Health;
         }
 
         public void ReturnX()
@@ -117,6 +119,11 @@ namespace TankTCP
         public void ReturnY()
         {
             _nextPosition.Y = _position.Y;
+        }
+
+        public void Hit()
+        {
+            _health--;
         }
 
         public Point[] GetEndPoints(double Angle,Point relate)
