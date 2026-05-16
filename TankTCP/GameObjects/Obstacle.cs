@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
@@ -35,6 +36,7 @@ namespace TankTCP
                 Fill = new ImageBrush(new BitmapImage(new Uri("./res/KAMEN.png", UriKind.Relative))),
                 Stretch = Stretch.Fill
             };
+            Canvas.SetZIndex(_object, -1);
         }
 
     }

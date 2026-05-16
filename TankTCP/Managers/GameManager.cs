@@ -20,13 +20,14 @@ namespace TankTCP
     public class GameManager
     {
         private SendedDto _worldState;
-        private const double _deltaTime = 1.0 / 60.0;
+        private const double MAX_DELTA_TIME = 0.1;
+        private const double KEY_INTERVAL = 1.0 / 60.0;
         public static Random random = new Random();
         private double _gameTime;
-        private Tank _tank;
-        private Tank _enemyTank;
         private List<Bullet> _bullets;
         private List<Obstacle> _obstacles;
+        private TankView _tankView;
+        private TankView _enemyTankView;
         public bool IsClient { get; private set; }
         private string[] _remotedKeys = { };
 
@@ -35,6 +36,7 @@ namespace TankTCP
         public event Action<SendedDto> OnWorldSended;
         public event Action<InputManager,double,double> OnTapToSend;
         public event Action<SendedDto> OnTankDestroy;
+        public event Action<TankView> OnTankCreated;
 
         public GameManager()
         {
@@ -48,15 +50,25 @@ namespace TankTCP
         }
         public void SpawnTank(Point pos)
         {
-            _tank = new Tank(pos, AttachType.Host,
+            var tank = new Tank(pos, AttachType.Host,
                 new ImageBrush(new BitmapImage(new Uri("./res/RedTank.png", UriKind.Relative))));
-            OnObjectCreated?.Invoke(_tank);
+            _tankView = new TankView(tank);
+            if (IsClient)
+            {
+                _tankView.ReloadBar.Visibility = Visibility.Hidden;
+            }
+            OnTankCreated?.Invoke(_tankView);
         }
         public void SpawnEnemyTank(Point pos)
         {
-            _enemyTank = new Tank(pos, AttachType.Client,
+            var enemyTank = new Tank(pos, AttachType.Client,
                 new ImageBrush(new BitmapImage(new Uri("./res/BlueTank.png", UriKind.Relative))));
-            OnObjectCreated?.Invoke(_enemyTank);
+            _enemyTankView = new TankView(enemyTank);
+            if (!IsClient)
+            {
+                _enemyTankView.ReloadBar.Visibility = Visibility.Hidden;
+            }
+            OnTankCreated?.Invoke(_enemyTankView);
         }
         public Rectangle CreateObstacle(Point pos)
         {
@@ -66,45 +78,59 @@ namespace TankTCP
             return obst.Object;
         }
 
-        public void Update(InputManager input)
+        public void PrepareNewMatch()
         {
-            _gameTime += _deltaTime;
+            _gameTime = 0;
+            _bullets.Clear();
+            _obstacles.Clear();
+            _remotedKeys = Array.Empty<string>();
+        }
+
+        public void Update(InputManager input,double dt)
+        {
+            if (dt <= 0)
+            {
+                return;
+            }
+
+            double result_dt = Math.Min(dt, MAX_DELTA_TIME);
+            _gameTime += result_dt;
 
             if (!IsClient)
             {
                 if (input.IsPressed(Key.W))
                 {
-                    _tank.MoveForward();
+                    _tankView.Tank.MoveForward();
                 }
                 if (input.IsPressed(Key.S))
                 {
-                    _tank.MoveBackward();
+                    _tankView.Tank.MoveBackward();
                 }
                 if (input.IsPressed(Key.A))
                 {
                     if (input.IsPressed(Key.S))
                     {
-                        _tank.RotateRight();
+                        _tankView.Tank.RotateRight();
                     }
                     else
                     {
-                        _tank.RotateLeft();
+                        _tankView.Tank.RotateLeft();
                     }
                 }
                 if (input.IsPressed(Key.D))
                 {
                     if (input.IsPressed(Key.S))
                     {
-                        _tank.RotateLeft();
+                        _tankView.Tank.RotateLeft();
                     }
                     else
                     {
-                        _tank.RotateRight();
+                        _tankView.Tank.RotateRight();
                     }
                 }
-                if (input.IsPressed(Key.Space) && _tank.CanShoot(_gameTime))
+                if (input.IsPressed(Key.Space) && _tankView.Tank.CanShoot(_gameTime))
                 {
-                    var bullet = _tank.Shoot(_gameTime);
+                    var bullet = _tankView.Tank.Shoot(_gameTime);
                     _bullets.Add(bullet);
 
                     OnObjectCreated?.Invoke(bullet);
@@ -114,21 +140,21 @@ namespace TankTCP
 
                 CheckCollisions(input);
 
-                _tank.Update();
-                _enemyTank.Update();
+                _tankView.Update(_gameTime);
+                _enemyTankView.Update(_gameTime);
 
                 foreach (var bullet in _bullets)
                 {
                     bullet.Update();
                 }
-
                 SaveWorld();
             }
             else
             {
-                OnTapToSend?.Invoke(input,_gameTime,_deltaTime);
-                _tank.Update();
-                _enemyTank.Update();
+                OnTapToSend?.Invoke(input,_gameTime,KEY_INTERVAL);
+                _tankView.Update(_gameTime);
+                _enemyTankView.Update(_gameTime);
+
                 foreach (var bullet in _bullets)
                 {
                     bullet.Update();
@@ -145,37 +171,37 @@ namespace TankTCP
         {
             if (_remotedKeys.Contains("W"))
             {
-                _enemyTank.MoveForward();
+                _enemyTankView.Tank.MoveForward();
             }
             if (_remotedKeys.Contains("S"))
             {
-                _enemyTank.MoveBackward();
+                _enemyTankView.Tank.MoveBackward();
             }
             if (_remotedKeys.Contains("A"))
             {
                 if (_remotedKeys.Contains("S"))
                 {
-                    _enemyTank.RotateRight();
+                    _enemyTankView.Tank.RotateRight();
                 }
                 else
                 {
-                    _enemyTank.RotateLeft();
+                    _enemyTankView.Tank.RotateLeft();
                 }
             }
             if (_remotedKeys.Contains("D"))
             {
                 if (_remotedKeys.Contains("S"))
                 {
-                    _enemyTank.RotateLeft();
+                    _enemyTankView.Tank.RotateLeft();
                 }
                 else
                 {
-                    _enemyTank.RotateRight();
+                    _enemyTankView.Tank.RotateRight();
                 }
             }
-            if (_remotedKeys.Contains("Space") && _enemyTank.CanShoot(_gameTime))
+            if (_remotedKeys.Contains("Space") && _enemyTankView.Tank.CanShoot(_gameTime))
             {
-                var bullet = _enemyTank.Shoot(_gameTime);
+                var bullet = _enemyTankView.Tank.Shoot(_gameTime);
                 _bullets.Add(bullet);
 
                 OnObjectCreated?.Invoke(bullet);
@@ -185,15 +211,16 @@ namespace TankTCP
 
         public void ApplyWorld(SendedDto dto)
         {
+            _gameTime = dto.GameTime;
             foreach(var obj in dto.gameObjects)
             {
                 if(obj.AttachType == AttachType.Host && obj.Type == GameObjectType.Tank)
                 {
-                    _tank.Apply(obj);
+                    _tankView.Tank.Apply(obj);
                 }
                 else if(obj.AttachType == AttachType.Client && obj.Type == GameObjectType.Tank)
                 {
-                    _enemyTank.Apply(obj);
+                    _enemyTankView.Tank.Apply(obj);
                 }
                 else if(obj.Type == GameObjectType.Bullet)
                 {
@@ -224,35 +251,38 @@ namespace TankTCP
         {
             if(attachType == AttachType.Client)
             {
-                OnGameObjectDestroy?.Invoke(_enemyTank);
+                OnGameObjectDestroy?.Invoke(_enemyTankView.Tank);
             }
             else
             {
-                OnGameObjectDestroy?.Invoke(_tank);
+                OnGameObjectDestroy?.Invoke(_tankView.Tank);
             }
         }
 
 
         private void SaveWorld()
         {
+            _worldState.GameTime = _gameTime;
             GameObjectDto tank = new GameObjectDto()
             {
-                Position = _tank.Position,
-                Angle = _tank.Angle,
-                AttachType = _tank.AttachType,
+                Position = _tankView.Tank.Position,
+                Angle = _tankView.Tank.Angle,
+                AttachType = _tankView.Tank.AttachType,
                 Type = GameObjectType.Tank,
                 Id = -1,
-                Health = _tank.Health
+                Health = _tankView.Tank.Health,
+                LastTimeShooting = _tankView.Tank._lastTimeShooting
             };
             _worldState.gameObjects.Add(tank);
             GameObjectDto enemyTank = new GameObjectDto()
             {
-                Position = _enemyTank.Position,
-                Angle = _enemyTank.Angle,
-                AttachType = _enemyTank.AttachType,
+                Position = _enemyTankView.Tank.Position,
+                Angle = _enemyTankView.Tank.Angle,
+                AttachType = _enemyTankView.Tank.AttachType,
                 Type = GameObjectType.Tank,
                 Id = -1,
-                Health = _enemyTank.Health
+                Health = _enemyTankView.Tank.Health,
+                LastTimeShooting = _enemyTankView.Tank._lastTimeShooting
             };
             _worldState.gameObjects.Add(enemyTank);
             foreach ( var bullet in _bullets)
@@ -273,12 +303,12 @@ namespace TankTCP
 
         private void TankObstacleCollision(Tank tank,Obstacle obstacle,InputManager input)
         {
-            var next_points = tank.GetCorners(tank.Angle, tank.NextPosition).ToList();
-            var next_end_points = tank.GetEndPoints(tank.Angle, tank.NextPosition);
+            var next_points = tank.GetCorners(tank.Angle, tank.NextBodyPosition).ToList();
+            var next_end_points = tank.GetEndPoints(tank.Angle, tank.NextBodyPosition);
             next_points.AddRange(next_end_points);
 
-            var points = tank.GetCorners(tank.PrevAngle, tank.Position).ToList();
-            var end_points = tank.GetEndPoints(tank.PrevAngle, tank.Position).ToList();
+            var points = tank.GetCorners(tank.PrevAngle, tank.BodyPosition).ToList();
+            var end_points = tank.GetEndPoints(tank.PrevAngle, tank.BodyPosition).ToList();
             points.AddRange(end_points);
 
             for (int i = 0; i < points.Count(); i++)
@@ -305,7 +335,7 @@ namespace TankTCP
 
                 }
                 if (IsCollider(
-                    new Point(next_points[i].X, points[i].Y - dif_y),
+                    new Point(points[i].X, next_points[i].Y - dif_y),
                     point_min: obstacle.Position,
                     point_max: new Point(obstacle.Position.X + obstacle.Width,
                                         obstacle.Position.Y + obstacle.Height)
@@ -329,9 +359,9 @@ namespace TankTCP
             foreach (var pos in bullet.GetCorners(bullet.Angle, bullet.Position))
             {
                 if (IsCollider(bullet.Position,
-                    point_min: tank.Position,
-                    point_max: new Point(tank.Position.X + tank.Width,
-                                        tank.Position.Y + tank.Height)
+                    point_min: tank.BodyPosition,
+                    point_max: new Point(tank.BodyPosition.X + tank.Width,
+                                        tank.BodyPosition.Y + tank.Height)
                     ) && bullet.AttachType != tank.AttachType)
                 {
                     _bullets.Remove(bullet);
@@ -354,8 +384,8 @@ namespace TankTCP
         {
             foreach(var obstacle in _obstacles)
             {
-                TankObstacleCollision(_tank, obstacle,input);
-                TankObstacleCollision(_enemyTank, obstacle, input);
+                TankObstacleCollision(_tankView.Tank, obstacle,input);
+                TankObstacleCollision(_enemyTankView.Tank, obstacle, input);
             }
 
             var bullets = _bullets.ToList();
@@ -381,20 +411,20 @@ namespace TankTCP
 
             foreach(var bullet in bullets)
             {
-                TankBulletCollision(_tank, bullet);
-                TankBulletCollision(_enemyTank, bullet);
+                TankBulletCollision(_tankView.Tank, bullet);
+                TankBulletCollision(_enemyTankView.Tank, bullet);
             }
 
 
-            CheckTankOffScreen(_tank,input);
-            CheckTankOffScreen(_enemyTank, input);
+            CheckTankOffScreen(_tankView.Tank,input);
+            CheckTankOffScreen(_enemyTankView.Tank, input);
             CheckBulletsOffScreen(bullets);
         }
 
         private void CheckTankOffScreen(Tank tank,InputManager input)
         {
-            var next_points = tank.GetCorners(tank.Angle, tank.NextPosition).ToList();
-            var points = tank.GetCorners(tank.PrevAngle, tank.Position).ToList();
+            var next_points = tank.GetCorners(tank.Angle, tank.NextBodyPosition).ToList();
+            var points = tank.GetCorners(tank.PrevAngle, tank.BodyPosition).ToList();
 
             for (int i = 0; i < points.Count; i++)
             {

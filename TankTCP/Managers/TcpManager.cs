@@ -14,6 +14,7 @@ namespace TankTCP
     {
         private string Ip;
         private const int Port = 8080;
+        public bool GameEnded = false;
 
         private IPEndPoint _tcpEndpoint;
         private Socket _socket;
@@ -96,7 +97,7 @@ namespace TankTCP
 
         public async void ClientAsync()
         {
-            while (true)
+            while (!GameEnded)
             {
                 string json = await _streamReader.ReadLineAsync();
 
@@ -114,6 +115,8 @@ namespace TankTCP
                 }
 
             }
+            _socket.Receive(new byte[1024]);
+            ClientWaitingAsync();
         }
 
         public async void StartGameAsync()

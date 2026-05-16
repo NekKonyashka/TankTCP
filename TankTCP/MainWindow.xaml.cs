@@ -24,6 +24,7 @@ namespace TankTCP
         private InputManager inputManager;
         private SoundManager soundManager;
         private double _lastTimeSend = 0;
+        private TimeSpan _lastRenderingTime = TimeSpan.Zero;
         public MainWindow()
         {
             InitializeComponent();
@@ -42,6 +43,7 @@ namespace TankTCP
             gameManager.OnWorldSended += GameManager_OnSended;
             gameManager.OnTapToSend += GameManager_OnKeySend;
             gameManager.OnTankDestroy += GameManager_OnTankDestroy;
+            gameManager.OnTankCreated += GameManager_OnTankCreated;
 
             tcpManager.OnPlayerConnected += TcpManager_OnPlayerConnected;
             tcpManager.OnGameStart += TcpManager_OnGameStart;
@@ -52,6 +54,14 @@ namespace TankTCP
             NameInput.Text = "Аноним" + new Random().Next();
         }
 
+        private void GameManager_OnTankCreated(TankView obj)
+        {
+            GameCanvas.Children.Add(obj.Grid);
+            Canvas.SetLeft(obj.Grid,obj.Tank.Position.X);
+            Canvas.SetTop(obj.Grid, obj.Tank.Position.Y);
+            UpdateLayout();
+            GameCanvas.UpdateLayout();
+        }
 
         private void GameManager_OnTankDestroy(SendedDto obj)
         {
@@ -63,26 +73,36 @@ namespace TankTCP
 
         private void EndGame(string username)
         {
+            UnsubscribeGameLoop();
+            GameCanvas.Children.Clear();
             soundManager.DoAction(SoundAction.Destroy);
             Menu.Visibility = Visibility.Visible;
             DefeatAndWInGrid.Visibility = Visibility.Visible;
             WInnerName.Text = username;
+            if (!gameManager.IsClient)
+            {
+                RestartButton.Visibility = Visibility.Visible;
+            }
         }
 
         private void TcpManager_OnTankDestroyed(AttachType obj,string name)
         {
-            gameManager.Destroy(obj);
             EndGame(name);
+            tcpManager.GameEnded = true;
+            Dispatcher.BeginInvoke(() =>
+            {
+                gameManager.Destroy(obj);
+            });
         }
 
         private void TcpManager_OnHostReceived(string[] obj)
         {
-            gameManager.SetRemoted(obj);
+            Dispatcher.BeginInvoke(() => gameManager.SetRemoted(obj));
         }
 
         private void GameManager_OnKeySend(InputManager obj,double time,double deltaTime)
         {
-            if(time - _lastTimeSend >= deltaTime)
+            if(time - _lastTimeSend > deltaTime)
             {
                 var keys = obj.Pressed.Select(k => k.ToString()).ToArray();
                 tcpManager.SendRemoteKey(keys);
@@ -92,7 +112,7 @@ namespace TankTCP
 
         private void TcpManager_OnClientReceived(SendedDto obj)
         {
-            gameManager.ApplyWorld(obj);
+            Dispatcher.BeginInvoke(() => gameManager.ApplyWorld(obj));
         }
 
         private void GameManager_OnSended(SendedDto obj)
@@ -119,15 +139,9 @@ namespace TankTCP
             GameCanvas.Children.Add(obj.Object);
             Canvas.SetLeft(spawnObject, obj.Position.X);
             Canvas.SetTop(spawnObject, obj.Position.Y);
-            if(obj is Tank)
-            {
-                Canvas.SetZIndex(spawnObject, 1);
-            }
-            else
-            {
-                Canvas.SetZIndex(spawnObject, -1);
-                soundManager.DoAction(SoundAction.Shoot);
-            }
+            Canvas.SetZIndex(spawnObject, -1);
+            soundManager.DoAction(SoundAction.Shoot);
+
             UpdateLayout();
             GameCanvas.UpdateLayout();
         }
@@ -140,7 +154,30 @@ namespace TankTCP
 
         private void CompositionTarget_Rendering(object? sender, EventArgs e)
         {
-            gameManager.Update(inputManager);
+            if (e is not RenderingEventArgs args)
+            {
+                return;
+            }
+
+            if (_lastRenderingTime == TimeSpan.Zero)
+            {
+                _lastRenderingTime = args.RenderingTime;
+                return;
+            }
+            double deltaTime = (args.RenderingTime - _lastRenderingTime).TotalSeconds;
+            _lastRenderingTime = args.RenderingTime;
+            gameManager.Update(inputManager, deltaTime);
+        }
+
+        private void SubscribeGameLoop()
+        {
+            CompositionTarget.Rendering += CompositionTarget_Rendering;
+            _lastRenderingTime = TimeSpan.Zero;
+        }
+        private void UnsubscribeGameLoop()
+        {
+            CompositionTarget.Rendering -= CompositionTarget_Rendering;
+            _lastRenderingTime = TimeSpan.Zero;
         }
 
 
@@ -170,10 +207,12 @@ namespace TankTCP
 
         private void LoadGame()
         {
+            tcpManager.GameEnded = false;
             Menu.Visibility = Visibility.Hidden;
+            gameManager.PrepareNewMatch();
             gameManager.SpawnTank(new Point(300, 100));
             gameManager.SpawnEnemyTank(new Point(600, 300));
-            CompositionTarget.Rendering += CompositionTarget_Rendering;
+            SubscribeGameLoop();
 
             var obst = gameManager.CreateObstacle(new Point(400, 200));
             GameCanvas.Children.Add(obst);
@@ -184,6 +223,7 @@ namespace TankTCP
             GameCanvas.Children.Add(obst2);
             Canvas.SetTop(obst2, 700);
             Canvas.SetLeft(obst2, 1000);
+            _lastTimeSend = 0;
         }
 
         private void Start_Click(object sender, RoutedEventArgs e)
@@ -206,7 +246,7 @@ namespace TankTCP
 
         private void RestartButton_Click(object sender, RoutedEventArgs e)
         {
-            GameCanvas.Children.Clear();
+            tcpManager.StartGameAsync();
             LoadGame();
         }
 

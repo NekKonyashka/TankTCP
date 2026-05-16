@@ -16,13 +16,19 @@ namespace TankTCP
     public class Tank : GameObject
     {
         public bool InMove = false;
-        private double? _lastTimeShooting = null;
+        public double? _lastTimeShooting = null;
         private byte _health = 3;
-        private double _reloadTime = 5;
+        private double _reloadTime = 0.1;
+        public double ReloadTime => _reloadTime;
         private double _speed = 1.5;
         private double _rotationSpeed = 1.25;
         public double PrevAngle { get; private set; }
         public byte Health => _health;
+
+        public double BodyOffsetY { get; set; }
+
+        public Point BodyPosition => new Point(Position.X, Position.Y + BodyOffsetY);
+        public Point NextBodyPosition => new Point(NextPosition.X, NextPosition.Y + BodyOffsetY);
 
         public Tank(Point pos, AttachType attachType, Brush fill) : base(pos, attachType)
         {
@@ -76,7 +82,7 @@ namespace TankTCP
         public Bullet Shoot(double shootTime)
         {
             _lastTimeShooting = shootTime;
-            var bullet_pos = new Point(Position.X + Width / 2 - 20 / 2, Position.Y + Height / 2 - 10 / 2);
+            var bullet_pos = new Point(BodyPosition.X + Width / 2 - 20 / 2, BodyPosition.Y + Height / 2 - 10 / 2);
             var bullet = new Bullet(bullet_pos, AttachType, Angle);
 
             return bullet;
@@ -86,14 +92,11 @@ namespace TankTCP
         {
             if (_lastTimeShooting == null) return true;
 
-            return time - _lastTimeShooting >= _reloadTime;
+            return time - _lastTimeShooting > _reloadTime;
         }
         public override void Update()
         {
             _position = _nextPosition;
-
-            Canvas.SetLeft(Object, _position.X);
-            Canvas.SetTop(Object, _position.Y);
         }
 
         public void Apply(GameObjectDto dto)
@@ -101,6 +104,7 @@ namespace TankTCP
             _nextPosition = dto.Position;
             _rotateTransform.Angle = dto.Angle;
             _health = dto.Health;
+            _lastTimeShooting = dto.LastTimeShooting;
         }
 
         public void ReturnX()
