@@ -12,6 +12,7 @@ namespace TankTCP
 {
     public class TcpManager
     {
+        private const string GameStartMarker = "GAMESTART";
         private string Ip;
         private const int Port = 8080;
         public bool GameEnded = false;
@@ -26,23 +27,23 @@ namespace TankTCP
         public event Action OnGameStart;
         public event Action<SendedDto> OnClientReceived;
         public event Action<string[]> OnHostReceived;
-        public event Action<AttachType,string> OnTankDestroyed;
+        public event Action<SendedDto> OnTankDestroyed;
 
         public TcpManager()
         {
-            _socket = new Socket(AddressFamily.InterNetwork,SocketType.Stream, ProtocolType.Tcp);
+            _socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
         }
 
         public bool TryIP(string ip)
         {
-            if(IPEndPoint.TryParse(ip, out var temp))
+            if (IPEndPoint.TryParse(ip, out var temp))
             {
                 Ip = ip;
                 return true;
             }
             return false;
         }
-        public async void Connect(bool IsClient)
+        public async Task Connect(bool IsClient)
         {
             if (IsClient)
             {
@@ -50,7 +51,7 @@ namespace TankTCP
                 await _socket.ConnectAsync(_tcpEndpoint);
                 _stream = new NetworkStream(_socket);
                 _streamReader = new StreamReader(_stream, Encoding.UTF8);
-                ClientWaitingAsync();
+                ClientReceiveLoopAsync();
             }
             else
             {
@@ -95,45 +96,44 @@ namespace TankTCP
             }
         }
 
-        public async void ClientAsync()
+        public async void ClientReceiveLoopAsync()
         {
-            while (!GameEnded)
+            while (true)
             {
-                string json = await _streamReader.ReadLineAsync();
-
-                if (json != null)
+                string line = await _streamReader.ReadLineAsync();
+                if (line == null)
                 {
-                    SendedDto dto = JsonSerializer.Deserialize<SendedDto>(json);
-                    if (dto?.gameObjects[0].Id == -67)
-                    {
-                        OnTankDestroyed?.Invoke(dto.gameObjects[0].AttachType, dto.gameObjects[0].UserName);
-                    }
-                    else
-                    {
-                        OnClientReceived?.Invoke(dto);
-                    }
+                    break;
                 }
 
+                if (line == GameStartMarker)
+                {
+                    GameEnded = false;
+                    OnGameStart?.Invoke();
+                    continue;
+                }
+
+                if (GameEnded)
+                {
+                    continue;
+                }
+
+                SendedDto dto = JsonSerializer.Deserialize<SendedDto>(line);
+                if (dto?.gameObjects[0].Id == -67)
+                {
+                    OnTankDestroyed?.Invoke(dto);
+                }
+                else
+                {
+                    OnClientReceived?.Invoke(dto);
+                }
             }
-            _socket.Receive(new byte[1024]);
-            ClientWaitingAsync();
         }
 
-        public async void StartGameAsync()
+        public async Task StartGameAsync()
         {
-            await _clientSocket.SendAsync(new byte[1]);
-        }
-
-        public async void ClientWaitingAsync()
-        {
-            byte[] data = new byte[1024];
-            int size = await _socket.ReceiveAsync(data);
-
-            if (size > 0)
-            {
-                OnGameStart?.Invoke();
-                ClientAsync();
-            }
+            byte[] data = Encoding.UTF8.GetBytes(GameStartMarker + "\n");
+            await _clientSocket.SendAsync(data);
         }
 
         public async void SendRemoteKey(string[] arr)

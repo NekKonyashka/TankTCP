@@ -25,7 +25,5 @@ namespace TankTCP
         public byte Health { get; set; }
 
         public double? LastTimeShooting { get; set; }
-
-        public string UserName { get; set; }
     }
 }

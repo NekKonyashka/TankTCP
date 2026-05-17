@@ -10,6 +10,7 @@ namespace TankTCP
     {
         public List<GameObjectDto> gameObjects { get; set; }
         public double GameTime { get; set; }
+        public string UserName { get; set; }
 
         public SendedDto()
         {

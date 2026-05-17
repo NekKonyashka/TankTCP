@@ -7,6 +7,7 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
+using TankTCP.GameObjects;
 
 namespace TankTCP
 {
@@ -15,18 +16,8 @@ namespace TankTCP
         Host,
         Client
     }
-    public abstract class GameObject
+    public abstract class GameObject : StandartObject
     {
-        protected Rectangle _object;
-        public Rectangle Object => _object;
-        protected Point _position;
-        public Point Position => _position;
-
-        protected double _width;
-        public double Width => _width;
-        protected double _height;
-        public double Height => _height;
-
         protected RotateTransform _rotateTransform;
         public double Angle => _rotateTransform.Angle;
         protected Point _nextPosition;
@@ -35,9 +26,8 @@ namespace TankTCP
         private AttachType _attachType;
         public AttachType AttachType => _attachType;
 
-        public GameObject(Point pos,AttachType attachType)
+        public GameObject(Point pos,AttachType attachType) : base(pos)
         {
-            _position = pos;
             _rotateTransform = new RotateTransform();
             _rotateTransform.Angle = 0;
 
@@ -53,6 +43,7 @@ namespace TankTCP
         }
 
         public abstract void Update();
+        public abstract void Apply(GameObjectDto dto);
 
         public Point[] GetCorners(double Angle, Point relate)
         {

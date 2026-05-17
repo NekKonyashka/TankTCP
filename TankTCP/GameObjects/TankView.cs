@@ -17,7 +17,10 @@ namespace TankTCP
         private Tank _tank;
         public Tank Tank => _tank;
         private Rectangle _reloadBar;
+        private List<Rectangle> _healthBars;
+
         public Rectangle ReloadBar => _reloadBar;
+        public List<Rectangle> HealthBars => _healthBars;
 
         public TankView(Tank tank)
         {
@@ -26,16 +29,40 @@ namespace TankTCP
             {
                 HorizontalAlignment = HorizontalAlignment.Left,
                 VerticalAlignment = VerticalAlignment.Top,
-                MaxWidth = tank.Width * 0.8,
+                MaxWidth = tank.Width,
                 Height = 6,
                 Fill = Brushes.LightGray,
-                Margin = new Thickness(0, 0, 0, 20)
+                Margin = new Thickness(0, 12, 0, 0)
             };
             _reloadBar.Width = _reloadBar.MaxWidth;
+            _healthBars = new List<Rectangle>(){
+                new Rectangle(){
+                    Width = _tank.Width * 0.3,
+                    Height = 6,
+                    VerticalAlignment = VerticalAlignment.Top,
+                    HorizontalAlignment = HorizontalAlignment.Left,
+                    Fill = Brushes.Red,
+                },
+                new Rectangle(){
+                    Width = _tank.Width * 0.3,
+                    Height = 6,
+                    VerticalAlignment = VerticalAlignment.Top,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    Fill = Brushes.Red,
+                },
+                new Rectangle(){
+                    Width = _tank.Width * 0.3,
+                    Height = 6,
+                    VerticalAlignment = VerticalAlignment.Top,
+                    HorizontalAlignment = HorizontalAlignment.Right,
+                    Fill = Brushes.Red,
+                }
+            };
             _grid = new Grid()
             {
                 Width = tank.Width,
-                Height = tank.Height + _reloadBar.Margin.Bottom + _reloadBar.Height,
+                Height = tank.Height + _reloadBar.Margin.Top + _reloadBar.Height +
+                                       _healthBars[0].Height + 4
             };
 
             _tank.Object.VerticalAlignment = VerticalAlignment.Bottom;
@@ -43,28 +70,44 @@ namespace TankTCP
 
             _grid.Children.Add(_tank.Object);
             _grid.Children.Add(_reloadBar);
+            foreach (var b in _healthBars)
+            {
+                _grid.Children.Add(b);
+            }
 
-            _tank.BodyOffsetY = _reloadBar.Height + _reloadBar.Margin.Bottom;
+            _tank.BodyOffsetY = _grid.Height - _tank.Height;
         }
 
         public void Update(double gameTime)
         {
             _tank.Update();
             ReloadUpdate(gameTime);
-            Canvas.SetLeft(_grid,_tank.Position.X);
+            SyncHealthBars();
+            Canvas.SetLeft(_grid, _tank.Position.X);
             Canvas.SetTop(_grid, _tank.Position.Y);
         }
 
-        public void ReloadUpdate(double gt)
+        private void ReloadUpdate(double gt)
         {
-            if(_tank._lastTimeShooting != null)
+            if (_tank._lastTimeShooting != null)
             {
                 var lt = _tank._lastTimeShooting.Value;
-                if(gt >= lt)
+                if (gt >= lt)
                 {
                     _reloadBar.Width = (gt - lt) / _tank.ReloadTime * _reloadBar.MaxWidth;
                 }
             }
         }
+
+        public void SyncHealthBars()
+        {
+            while (_healthBars.Count > _tank.Health)
+            {
+                var bar = _healthBars[_healthBars.Count - 1];
+                _grid.Children.Remove(bar);
+                _healthBars.Remove(bar);
+            }
+        }
+
     }
 }

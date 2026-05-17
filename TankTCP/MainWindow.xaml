@@ -41,7 +41,7 @@
                 <TextBlock TextWrapping="Wrap" Text="ИГРА ОКОНЧЕНА" Margin="0,0,0,200" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="18"/>
                 <Button x:Name="RestartButton" Content="Restart" HorizontalAlignment="Center" VerticalAlignment="Center" Width="75" Height="75" Click="RestartButton_Click" Visibility="Hidden"/>
                 <TextBlock TextWrapping="Wrap" Text="Победил:" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="18" Margin="0,0,100,150"/>
-                <TextBlock x:Name="WInnerName" TextWrapping="Wrap" HorizontalAlignment="Left" VerticalAlignment="Top" FontSize="18" Margin="399,120,0,0"/>
+                <TextBlock x:Name="WInnerName" TextWrapping="Wrap" HorizontalAlignment="Left" VerticalAlignment="Top" FontSize="18" Margin="399,130,0,0"/>
             </Grid>
         </Grid>
     </Grid>

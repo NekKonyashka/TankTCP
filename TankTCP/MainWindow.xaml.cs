@@ -9,6 +9,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using TankTCP.GameObjects;
 
 namespace TankTCP
 {
@@ -17,12 +18,22 @@ namespace TankTCP
     /// </summary>
     public partial class MainWindow : Window
     {
+        public const double MAX_WIDTH = 1920;
+        public const double MAX_HEIGHT = 1080;
+
+        private double _widthCef;
+        private double _heightCef;
+
         private string _username;
         private string _clientName;
+
         private GameManager gameManager;
         private TcpManager tcpManager;
         private InputManager inputManager;
         private SoundManager soundManager;
+        private AnimationManager animationManager;
+
+
         private double _lastTimeSend = 0;
         private TimeSpan _lastRenderingTime = TimeSpan.Zero;
         public MainWindow()
@@ -33,10 +44,17 @@ namespace TankTCP
             //Height = SystemParameters.WorkArea.Height;
             //ResizeMode = ResizeMode.NoResize;
 
+            _widthCef = Width / MAX_WIDTH;
+            _heightCef = Height / MAX_HEIGHT;
+
             gameManager = new GameManager();
             inputManager = new InputManager();
             tcpManager = new TcpManager();
             soundManager = new SoundManager();
+            animationManager = new AnimationManager(_widthCef, _heightCef);
+
+            StandartObject.ObjectWidthCef = _widthCef;
+            StandartObject.ObjectHeightCef = _heightCef;
 
             gameManager.OnObjectCreated += GameManager_OnObjectCreated;
             gameManager.OnGameObjectDestroy += GameManager_OnGameObjectDestroy;
@@ -51,29 +69,48 @@ namespace TankTCP
             tcpManager.OnHostReceived += TcpManager_OnHostReceived;
             tcpManager.OnTankDestroyed += TcpManager_OnTankDestroyed;
 
+            animationManager.OnAnimationStart += AnimationManager_OnAnimationStart;
+            animationManager.OnAnimationEnd += AnimationManager_OnAnimationEnd;
+
             NameInput.Text = "Аноним" + new Random().Next();
+        }
+
+        private void AnimationManager_OnAnimationEnd(Image obj)
+        {
+            GameCanvas.Children.Remove(obj);
+        }
+
+        private void AnimationManager_OnAnimationStart(Image obj, Point pos)
+        {
+            GameCanvas.Children.Add(obj);
+            Canvas.SetLeft(obj, pos.X);
+            Canvas.SetTop(obj, pos.Y);
+            Canvas.SetZIndex(obj, 5);
         }
 
         private void GameManager_OnTankCreated(TankView obj)
         {
             GameCanvas.Children.Add(obj.Grid);
-            Canvas.SetLeft(obj.Grid,obj.Tank.Position.X);
+            Canvas.SetLeft(obj.Grid, obj.Tank.Position.X);
             Canvas.SetTop(obj.Grid, obj.Tank.Position.Y);
             UpdateLayout();
             GameCanvas.UpdateLayout();
         }
 
-        private void GameManager_OnTankDestroy(SendedDto obj)
+        private async void GameManager_OnTankDestroy(SendedDto obj)
         {
-            string name = obj.gameObjects[0].AttachType == AttachType.Client ?  _username : _clientName;
-            obj.gameObjects[0].UserName = name;
+            string name = obj.gameObjects[0].AttachType == AttachType.Client ? _username : _clientName;
+            obj.UserName = name;
             tcpManager.SendTankDestroyMessage(obj);
+            GameCanvas.Children.Remove(gameManager.GetTankView(obj.gameObjects[0].AttachType).Grid);
+            animationManager.Start(obj.gameObjects[0].Position);
+            UnsubscribeGameLoop();
+            await animationManager.TaskCompletionSource.Task;
             EndGame(name);
         }
 
         private void EndGame(string username)
         {
-            UnsubscribeGameLoop();
             GameCanvas.Children.Clear();
             soundManager.DoAction(SoundAction.Destroy);
             Menu.Visibility = Visibility.Visible;
@@ -85,14 +122,14 @@ namespace TankTCP
             }
         }
 
-        private void TcpManager_OnTankDestroyed(AttachType obj,string name)
+        private async void TcpManager_OnTankDestroyed(SendedDto obj)
         {
-            EndGame(name);
             tcpManager.GameEnded = true;
-            Dispatcher.BeginInvoke(() =>
-            {
-                gameManager.Destroy(obj);
-            });
+            GameCanvas.Children.Remove(gameManager.GetTankView(obj.gameObjects[0].AttachType).Grid);
+            animationManager.Start(obj.gameObjects[0].Position);
+            UnsubscribeGameLoop();
+            await animationManager.TaskCompletionSource.Task;
+            EndGame(obj.UserName);
         }
 
         private void TcpManager_OnHostReceived(string[] obj)
@@ -100,9 +137,9 @@ namespace TankTCP
             Dispatcher.BeginInvoke(() => gameManager.SetRemoted(obj));
         }
 
-        private void GameManager_OnKeySend(InputManager obj,double time,double deltaTime)
+        private void GameManager_OnKeySend(InputManager obj, double time, double deltaTime)
         {
-            if(time - _lastTimeSend > deltaTime)
+            if (time - _lastTimeSend > deltaTime)
             {
                 var keys = obj.Pressed.Select(k => k.ToString()).ToArray();
                 tcpManager.SendRemoteKey(keys);
@@ -122,8 +159,11 @@ namespace TankTCP
 
         private void TcpManager_OnGameStart()
         {
-            Waiting_Client.Visibility = Visibility.Hidden;
-            LoadGame();
+            Dispatcher.BeginInvoke(() =>
+            {
+                Waiting_Client.Visibility = Visibility.Hidden;
+                LoadGame();
+            });
         }
 
         private void TcpManager_OnPlayerConnected(string name)
@@ -209,26 +249,30 @@ namespace TankTCP
         {
             tcpManager.GameEnded = false;
             Menu.Visibility = Visibility.Hidden;
+            DefeatAndWInGrid.Visibility = Visibility.Hidden;
             gameManager.PrepareNewMatch();
-            gameManager.SpawnTank(new Point(300, 100));
-            gameManager.SpawnEnemyTank(new Point(600, 300));
+            gameManager.SpawnTank(new Point(200 * _widthCef, 100 * _heightCef));
+            gameManager.SpawnEnemyTank(new Point(1720 * _widthCef, 800 * _heightCef));
             SubscribeGameLoop();
 
-            var obst = gameManager.CreateObstacle(new Point(400, 200));
-            GameCanvas.Children.Add(obst);
-            Canvas.SetTop(obst, 200);
-            Canvas.SetLeft(obst, 400);
+            var obst = gameManager.CreateObstacle(new Point(400 * _widthCef, 200 * _heightCef));
+            GameCanvas.Children.Add(obst.Object);
+            Canvas.SetTop(obst.Object, obst.Position.Y);
+            Canvas.SetLeft(obst.Object, obst.Position.X);
+            Canvas.SetZIndex(obst.Object, -1);
 
-            var obst2 = gameManager.CreateObstacle(new Point(1000, 700));
-            GameCanvas.Children.Add(obst2);
-            Canvas.SetTop(obst2, 700);
-            Canvas.SetLeft(obst2, 1000);
+            var obst2 = gameManager.CreateObstacle(new Point(1520 * _widthCef, 700 * _heightCef));
+            GameCanvas.Children.Add(obst2.Object);
+            Canvas.SetTop(obst2.Object, obst2.Position.Y);
+            Canvas.SetLeft(obst2.Object, obst2.Position.X);
+            Canvas.SetZIndex(obst2.Object, -1);
+
             _lastTimeSend = 0;
         }
 
-        private void Start_Click(object sender, RoutedEventArgs e)
+        private async void Start_Click(object sender, RoutedEventArgs e)
         {
-            tcpManager.StartGameAsync();
+            await tcpManager.StartGameAsync();
             Waiting_Server.Visibility = Visibility.Hidden;
             LoadGame();
         }
@@ -239,20 +283,20 @@ namespace TankTCP
             {
                 MenuOfInput.Visibility = Visibility.Hidden;
                 Waiting_Client.Visibility = Visibility.Visible;
-                tcpManager.Connect(true);
+                await tcpManager.Connect(true);
                 tcpManager.SendName(_username);
             }
         }
 
-        private void RestartButton_Click(object sender, RoutedEventArgs e)
+        private async void RestartButton_Click(object sender, RoutedEventArgs e)
         {
-            tcpManager.StartGameAsync();
+            await tcpManager.StartGameAsync();
             LoadGame();
         }
 
         private void NameEnter_Click(object sender, RoutedEventArgs e)
         {
-            if (!string.IsNullOrEmpty(NameInput.Text))
+            if (!string.IsNullOrEmpty(NameInput.Text) && NameInput.Text.Length <= 32)
             {
                 _username = NameInput.Text;
                 Name.Visibility = Visibility.Hidden;

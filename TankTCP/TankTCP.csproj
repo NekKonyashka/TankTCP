@@ -13,6 +13,7 @@
     <None Remove="res\BlueTank.png" />
     <None Remove="res\Bullet.png" />
     <None Remove="res\dead.wav" />
+    <None Remove="res\ExplosionSprite.png" />
     <None Remove="res\KAMEN.png" />
     <None Remove="res\RedTank.png" />
     <None Remove="res\shoot.wav" />
@@ -29,6 +30,9 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="res\dead.wav">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="res\ExplosionSprite.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="res\KAMEN.png">

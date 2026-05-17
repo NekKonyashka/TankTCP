@@ -15,6 +15,9 @@ namespace TankTCP
 {
     public class Bullet : GameObject
     {
+        private const double DEFAULT_BULLET_WIDTH = 30;
+        private const double DEFAULT_BULLET_HEIGHT = 20;
+
         private static int counter = 0;
         private double _speed = 20;
         private int _id;
@@ -22,8 +25,8 @@ namespace TankTCP
         public Bullet(Point pos, AttachType attachType, double angle) : base(pos, attachType)
         {
             _id = counter++;
-            _width = 20;
-            _height = 10;
+            _width = ObjectWidthCef * DEFAULT_BULLET_WIDTH;
+            _height = ObjectHeightCef * DEFAULT_BULLET_HEIGHT;
             _rotateTransform.Angle = angle;
             _object.Fill = new ImageBrush(new BitmapImage(new Uri("./res/Bullet.png", UriKind.Relative)));
             _object.Width = _width;
@@ -46,7 +49,7 @@ namespace TankTCP
             Canvas.SetTop(Object, _position.Y);
         }
 
-        public void Apply(GameObjectDto dto)
+        public override void Apply(GameObjectDto dto)
         {
             _rotateTransform.Angle = dto.Angle;
             _position = dto.Position;

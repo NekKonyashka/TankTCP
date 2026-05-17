@@ -34,7 +34,7 @@ namespace TankTCP
         public event Action<GameObject> OnObjectCreated;
         public event Action<GameObject> OnGameObjectDestroy;
         public event Action<SendedDto> OnWorldSended;
-        public event Action<InputManager,double,double> OnTapToSend;
+        public event Action<InputManager, double, double> OnTapToSend;
         public event Action<SendedDto> OnTankDestroy;
         public event Action<TankView> OnTankCreated;
 
@@ -70,12 +70,12 @@ namespace TankTCP
             }
             OnTankCreated?.Invoke(_enemyTankView);
         }
-        public Rectangle CreateObstacle(Point pos)
+        public Obstacle CreateObstacle(Point pos)
         {
-            var obst = new Obstacle(pos, 100, 100);
+            var obst = new Obstacle(pos);
             _obstacles.Add(obst);
 
-            return obst.Object;
+            return obst;
         }
 
         public void PrepareNewMatch()
@@ -86,7 +86,7 @@ namespace TankTCP
             _remotedKeys = Array.Empty<string>();
         }
 
-        public void Update(InputManager input,double dt)
+        public void Update(InputManager input, double dt)
         {
             if (dt <= 0)
             {
@@ -151,7 +151,7 @@ namespace TankTCP
             }
             else
             {
-                OnTapToSend?.Invoke(input,_gameTime,KEY_INTERVAL);
+                OnTapToSend?.Invoke(input, _gameTime, KEY_INTERVAL);
                 _tankView.Update(_gameTime);
                 _enemyTankView.Update(_gameTime);
 
@@ -212,19 +212,21 @@ namespace TankTCP
         public void ApplyWorld(SendedDto dto)
         {
             _gameTime = dto.GameTime;
-            foreach(var obj in dto.gameObjects)
+            foreach (var obj in dto.gameObjects)
             {
-                if(obj.AttachType == AttachType.Host && obj.Type == GameObjectType.Tank)
+                if (obj.AttachType == AttachType.Host && obj.Type == GameObjectType.Tank)
                 {
                     _tankView.Tank.Apply(obj);
+                    _tankView.SyncHealthBars();
                 }
-                else if(obj.AttachType == AttachType.Client && obj.Type == GameObjectType.Tank)
+                else if (obj.AttachType == AttachType.Client && obj.Type == GameObjectType.Tank)
                 {
                     _enemyTankView.Tank.Apply(obj);
+                    _enemyTankView.SyncHealthBars();
                 }
-                else if(obj.Type == GameObjectType.Bullet)
+                else if (obj.Type == GameObjectType.Bullet)
                 {
-                    if(_bullets.Where(b => b.Id == obj.Id).FirstOrDefault() == null)
+                    if (_bullets.Where(b => b.Id == obj.Id).FirstOrDefault() == null)
                     {
                         Bullet bullet = new Bullet(obj.Position, obj.AttachType, obj.Angle);
                         _bullets.Add(bullet);
@@ -236,10 +238,10 @@ namespace TankTCP
             //Короче тут проходит по списку текущих пуль и каждую пулю передает в перебор списка состояния объектов от сервера,
             //у который тип Bullet.А далее сравнивается айди переданной пули со всеми пулями сервера и если количество
             //совпадений равно 0, то пуля на серваке уже не существует и поэтому она удаляется у клиента.
-            
+
             var deletedBullets = _bullets.Where(b => dto.gameObjects.Where(
                 obj => obj.Type == GameObjectType.Bullet && b.Id == obj.Id).Count() == 0).ToList();
-            foreach(var bullet in deletedBullets)
+            foreach (var bullet in deletedBullets)
             {
                 _bullets.Remove(bullet);
                 OnGameObjectDestroy?.Invoke(bullet);
@@ -247,17 +249,11 @@ namespace TankTCP
         }
 
 
-        public void Destroy(AttachType attachType)
+        public TankView GetTankView(AttachType attachType)
         {
-            if(attachType == AttachType.Client)
-            {
-                OnGameObjectDestroy?.Invoke(_enemyTankView.Tank);
-            }
-            else
-            {
-                OnGameObjectDestroy?.Invoke(_tankView.Tank);
-            }
+            return attachType == AttachType.Client ? _enemyTankView : _tankView;
         }
+
 
 
         private void SaveWorld()
@@ -285,7 +281,7 @@ namespace TankTCP
                 LastTimeShooting = _enemyTankView.Tank._lastTimeShooting
             };
             _worldState.gameObjects.Add(enemyTank);
-            foreach ( var bullet in _bullets)
+            foreach (var bullet in _bullets)
             {
                 var bulletDto = new GameObjectDto()
                 {
@@ -301,7 +297,7 @@ namespace TankTCP
             _worldState.gameObjects.Clear();
         }
 
-        private void TankObstacleCollision(Tank tank,Obstacle obstacle,InputManager input)
+        private void TankObstacleCollision(Tank tank, Obstacle obstacle, InputManager input)
         {
             var next_points = tank.GetCorners(tank.Angle, tank.NextBodyPosition).ToList();
             var next_end_points = tank.GetEndPoints(tank.Angle, tank.NextBodyPosition);
@@ -323,38 +319,64 @@ namespace TankTCP
                                         obstacle.Position.Y + obstacle.Height)
                     ))
                 {
-
-                    if (input.IsPressed(Key.A) || input.IsPressed(Key.D))
+                    if (tank.AttachType == AttachType.Host)
                     {
-                        tank.MoveBackX(dif_x);
+                        if (input.IsPressed(Key.A) || input.IsPressed(Key.D))
+                        {
+                            tank.MoveBackX(dif_x);
+                        }
+                        else
+                        {
+                            tank.ReturnX();
+                        }
                     }
                     else
                     {
-                        tank.ReturnX();
+                        if (_remotedKeys.Contains("A") || _remotedKeys.Contains("D"))
+                        {
+                            tank.MoveBackX(dif_x);
+                        }
+                        else
+                        {
+                            tank.ReturnX();
+                        }
                     }
-
                 }
                 if (IsCollider(
-                    new Point(points[i].X, next_points[i].Y - dif_y),
+                    new Point(next_points[i].X, points[i].Y - dif_y),
                     point_min: obstacle.Position,
                     point_max: new Point(obstacle.Position.X + obstacle.Width,
                                         obstacle.Position.Y + obstacle.Height)
                     ))
                 {
-
-                    if (input.IsPressed(Key.A) || input.IsPressed(Key.D))
+                    if (tank.AttachType == AttachType.Host)
                     {
-                        tank.MoveBackY(dif_y);
+                        if (input.IsPressed(Key.A) || input.IsPressed(Key.D))
+                        {
+                            tank.MoveBackY(dif_y);
+                        }
+                        else
+                        {
+                            tank.ReturnY();
+                        }
                     }
                     else
                     {
-                        tank.ReturnY();
+                        if (_remotedKeys.Contains("A") || _remotedKeys.Contains("D"))
+                        {
+                            tank.MoveBackY(dif_y);
+                        }
+                        else
+                        {
+                            tank.ReturnY();
+                        }
                     }
+
                 }
             }
         }
 
-        private void TankBulletCollision(Tank tank,Bullet bullet)
+        private void TankBulletCollision(Tank tank, Bullet bullet)
         {
             foreach (var pos in bullet.GetCorners(bullet.Angle, bullet.Position))
             {
@@ -367,12 +389,13 @@ namespace TankTCP
                     _bullets.Remove(bullet);
                     OnGameObjectDestroy?.Invoke(bullet);
                     tank.Hit();
-                    if(tank.Health == 0)
+                    if (tank.Health == 0)
                     {
-                        OnGameObjectDestroy?.Invoke(tank);
+
                         OnTankDestroy?.Invoke(new SendedDto()
                         {
-                            gameObjects = { new GameObjectDto() { Id = -67, AttachType = tank.AttachType} }
+                            gameObjects = { new GameObjectDto() { Id = -67, AttachType = tank.AttachType,
+                                Position = new Point(tank.BodyPosition.X - tank.Width / 2,tank.BodyPosition.Y - tank.Height / 2) } }
                         });
                     }
                     break;
@@ -382,18 +405,18 @@ namespace TankTCP
 
         private void CheckCollisions(InputManager input)
         {
-            foreach(var obstacle in _obstacles)
+            foreach (var obstacle in _obstacles)
             {
-                TankObstacleCollision(_tankView.Tank, obstacle,input);
+                TankObstacleCollision(_tankView.Tank, obstacle, input);
                 TankObstacleCollision(_enemyTankView.Tank, obstacle, input);
             }
 
             var bullets = _bullets.ToList();
-            foreach(var obstacle in _obstacles)
+            foreach (var obstacle in _obstacles)
             {
-                foreach(var bullet in bullets)
+                foreach (var bullet in bullets)
                 {
-                    foreach(var pos in bullet.GetCorners(bullet.Angle,bullet.Position))
+                    foreach (var pos in bullet.GetCorners(bullet.Angle, bullet.Position))
                     {
                         if (IsCollider(bullet.Position,
                             point_min: obstacle.Position,
@@ -409,19 +432,19 @@ namespace TankTCP
                 }
             }
 
-            foreach(var bullet in bullets)
+            foreach (var bullet in bullets)
             {
                 TankBulletCollision(_tankView.Tank, bullet);
                 TankBulletCollision(_enemyTankView.Tank, bullet);
             }
 
 
-            CheckTankOffScreen(_tankView.Tank,input);
+            CheckTankOffScreen(_tankView.Tank, input);
             CheckTankOffScreen(_enemyTankView.Tank, input);
             CheckBulletsOffScreen(bullets);
         }
 
-        private void CheckTankOffScreen(Tank tank,InputManager input)
+        private void CheckTankOffScreen(Tank tank, InputManager input)
         {
             var next_points = tank.GetCorners(tank.Angle, tank.NextBodyPosition).ToList();
             var points = tank.GetCorners(tank.PrevAngle, tank.BodyPosition).ToList();
@@ -438,14 +461,27 @@ namespace TankTCP
                                         SystemParameters.WorkArea.Height)
                     ))
                 {
-
-                    if (input.IsPressed(Key.A) || input.IsPressed(Key.D))
+                    if (tank.AttachType == AttachType.Host)
                     {
-                        tank.MoveBackX(dif_x);
+                        if (input.IsPressed(Key.A) || input.IsPressed(Key.D))
+                        {
+                            tank.MoveBackX(dif_x);
+                        }
+                        else
+                        {
+                            tank.ReturnX();
+                        }
                     }
                     else
                     {
-                        tank.ReturnX();
+                        if (_remotedKeys.Contains("A") || _remotedKeys.Contains("D"))
+                        {
+                            tank.MoveBackX(dif_x);
+                        }
+                        else
+                        {
+                            tank.ReturnX();
+                        }
                     }
                 }
                 if (!IsCollider(
@@ -456,13 +492,27 @@ namespace TankTCP
                     ))
                 {
 
-                    if (input.IsPressed(Key.A) || input.IsPressed(Key.D))
+                    if (tank.AttachType == AttachType.Host)
                     {
-                        tank.MoveBackY(dif_y);
+                        if (input.IsPressed(Key.A) || input.IsPressed(Key.D))
+                        {
+                            tank.MoveBackY(dif_y);
+                        }
+                        else
+                        {
+                            tank.ReturnY();
+                        }
                     }
                     else
                     {
-                        tank.ReturnY();
+                        if (_remotedKeys.Contains("A") || _remotedKeys.Contains("D"))
+                        {
+                            tank.MoveBackY(dif_y);
+                        }
+                        else
+                        {
+                            tank.ReturnY();
+                        }
                     }
 
                 }
@@ -471,22 +521,22 @@ namespace TankTCP
 
         private void CheckBulletsOffScreen(List<Bullet> bullets)
         {
-            foreach(var bullet in bullets)
+            foreach (var bullet in bullets)
             {
-                if(!IsCollider(bullet.Position,
-                    point_min:new Point(0,0),
+                if (!IsCollider(bullet.Position,
+                    point_min: new Point(0, 0),
                     point_max: new Point(SystemParameters.WorkArea.Width,
                                         SystemParameters.WorkArea.Height)))
                 {
                     _bullets.Remove(bullet);
                     OnGameObjectDestroy?.Invoke(bullet);
                 }
-                    
+
 
             }
         }
 
-        private bool IsCollider(Point point1,Point point_min,Point point_max)
+        private bool IsCollider(Point point1, Point point_min, Point point_max)
         {
             return point1.X >= point_min.X && point1.X <= point_max.X &&
                    point1.Y >= point_min.Y && point1.Y <= point_max.Y;
@@ -507,7 +557,7 @@ namespace TankTCP
         //    for(int i = 0;i < axis.Count; i++)
         //    {
         //        var d = axis[i];
-                
+
         //        double plane_c1 = d.X * center1.X + d.Y * center1.Y;
         //        double radius1 = half_w1 * Math.Abs(d.X * u1.X + d.Y * u1.Y) + 
         //                         half_h1 * Math.Abs(d.X * v1.X + d.Y * v1.Y);

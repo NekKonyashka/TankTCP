@@ -15,10 +15,13 @@ namespace TankTCP
 {
     public class Tank : GameObject
     {
+        private const double DEFAULT_TANK_WIDTH = 100;
+        private const double DEFAULT_TANK_HEIGHT = 70;
+
         public bool InMove = false;
         public double? _lastTimeShooting = null;
         private byte _health = 3;
-        private double _reloadTime = 0.1;
+        private double _reloadTime = 5;
         public double ReloadTime => _reloadTime;
         private double _speed = 1.5;
         private double _rotationSpeed = 1.25;
@@ -32,8 +35,8 @@ namespace TankTCP
 
         public Tank(Point pos, AttachType attachType, Brush fill) : base(pos, attachType)
         {
-            _width = 60;
-            _height = 50;
+            _width = ObjectWidthCef * DEFAULT_TANK_WIDTH;
+            _height = ObjectHeightCef * DEFAULT_TANK_HEIGHT;
             _nextPosition = pos;
             PrevAngle = Angle;
             _object.Fill = fill;
@@ -65,7 +68,7 @@ namespace TankTCP
         {
             PrevAngle = Angle;
             _rotateTransform.Angle -= _rotationSpeed;
-            if(Angle < 0)
+            if (Angle < 0)
             {
                 _rotateTransform.Angle = 360;
             }
@@ -74,7 +77,7 @@ namespace TankTCP
         {
             PrevAngle = Angle;
             _rotateTransform.Angle += _rotationSpeed;
-            if(Angle > 360)
+            if (Angle > 360)
             {
                 _rotateTransform.Angle = 0;
             }
@@ -99,7 +102,7 @@ namespace TankTCP
             _position = _nextPosition;
         }
 
-        public void Apply(GameObjectDto dto)
+        public override void Apply(GameObjectDto dto)
         {
             _nextPosition = dto.Position;
             _rotateTransform.Angle = dto.Angle;
@@ -130,7 +133,7 @@ namespace TankTCP
             _health--;
         }
 
-        public Point[] GetEndPoints(double Angle,Point relate)
+        public Point[] GetEndPoints(double Angle, Point relate)
         {
             var center_pos = new Point(relate.X + Width / 2, relate.Y + Height / 2);
 
