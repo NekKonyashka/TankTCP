@@ -238,6 +238,7 @@ namespace TankTCP
                         Bullet bullet = new Bullet(obj.Position, obj.AttachType, obj.Angle);
                         _bullets.Add(bullet);
                         bullet.Apply(obj);
+                        OnAction?.Invoke(SoundAction.Shoot);
                         OnObjectCreated?.Invoke(bullet);
                     }
                 }
@@ -251,6 +252,7 @@ namespace TankTCP
             foreach (var bullet in deletedBullets)
             {
                 _bullets.Remove(bullet);
+                OnAction?.Invoke(SoundAction.Hit);
                 OnGameObjectDestroy?.Invoke(bullet);
             }
         }
@@ -437,6 +439,7 @@ namespace TankTCP
                             ))
                         {
                             _bullets.Remove(bullet);
+                            OnAction?.Invoke(SoundAction.Hit);
                             OnGameObjectDestroy?.Invoke(bullet);
                             break;
                         }
