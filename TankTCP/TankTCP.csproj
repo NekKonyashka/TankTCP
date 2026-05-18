@@ -10,10 +10,12 @@
 
   <ItemGroup>
     <None Remove="res\Background.jpg" />
+    <None Remove="res\BGmusic.mp3" />
     <None Remove="res\BlueTank.png" />
     <None Remove="res\Bullet.png" />
     <None Remove="res\dead.wav" />
     <None Remove="res\ExplosionSprite.png" />
+    <None Remove="res\hit.wav" />
     <None Remove="res\KAMEN.png" />
     <None Remove="res\RedTank.png" />
     <None Remove="res\shoot.wav" />
@@ -21,6 +23,9 @@
 
   <ItemGroup>
     <Content Include="res\Background.jpg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="res\BGmusic.mp3">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="res\BlueTank.png">
@@ -33,6 +38,9 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="res\ExplosionSprite.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="res\hit.wav">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="res\KAMEN.png">

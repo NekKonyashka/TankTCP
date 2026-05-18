@@ -26,10 +26,10 @@ namespace TankTCP
         private AttachType _attachType;
         public AttachType AttachType => _attachType;
 
-        public GameObject(Point pos,AttachType attachType) : base(pos)
+        public GameObject(Point pos,AttachType attachType,double angle) : base(pos)
         {
             _rotateTransform = new RotateTransform();
-            _rotateTransform.Angle = 0;
+            _rotateTransform.Angle = angle;
 
             _object = new Rectangle()
             {
@@ -42,12 +42,11 @@ namespace TankTCP
             _attachType = attachType;
         }
 
-        public abstract void Update();
         public abstract void Apply(GameObjectDto dto);
 
         public Point[] GetCorners(double Angle, Point relate)
         {
-            var center_pos = new Point(relate.X + Width / 2, relate.Y + Height / 2);
+            var center_pos = GetCenterPos(relate);
             return new[]
             {
                 GetRelatedPoint(Angle,center_pos,relate),
@@ -55,6 +54,11 @@ namespace TankTCP
                 GetRelatedPoint(Angle, center_pos,new Point(relate.X,relate.Y + Height)),
                 GetRelatedPoint(Angle, center_pos,new Point(relate.X + Width,relate.Y + Height))
             };
+        }
+
+        public Point GetCenterPos(Point relate)
+        {
+            return new Point(relate.X + Width / 2, relate.Y + Height / 2);
         }
 
         public Point GetRelatedPoint(double Angle, Point center_pos, Point current)

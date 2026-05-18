@@ -37,6 +37,7 @@ namespace TankTCP
         public event Action<InputManager, double, double> OnTapToSend;
         public event Action<SendedDto> OnTankDestroy;
         public event Action<TankView> OnTankCreated;
+        public event Action<SoundAction> OnAction;
 
         public GameManager()
         {
@@ -50,7 +51,7 @@ namespace TankTCP
         }
         public void SpawnTank(Point pos)
         {
-            var tank = new Tank(pos, AttachType.Host,
+            var tank = new Tank(pos, AttachType.Host,180,
                 new ImageBrush(new BitmapImage(new Uri("./res/RedTank.png", UriKind.Relative))));
             _tankView = new TankView(tank);
             if (IsClient)
@@ -61,7 +62,7 @@ namespace TankTCP
         }
         public void SpawnEnemyTank(Point pos)
         {
-            var enemyTank = new Tank(pos, AttachType.Client,
+            var enemyTank = new Tank(pos, AttachType.Client,0,
                 new ImageBrush(new BitmapImage(new Uri("./res/BlueTank.png", UriKind.Relative))));
             _enemyTankView = new TankView(enemyTank);
             if (!IsClient)
@@ -100,11 +101,11 @@ namespace TankTCP
             {
                 if (input.IsPressed(Key.W))
                 {
-                    _tankView.Tank.MoveForward();
+                    _tankView.Tank.MoveForward(result_dt);
                 }
                 if (input.IsPressed(Key.S))
                 {
-                    _tankView.Tank.MoveBackward();
+                    _tankView.Tank.MoveBackward(result_dt);
                 }
                 if (input.IsPressed(Key.A))
                 {
@@ -132,11 +133,11 @@ namespace TankTCP
                 {
                     var bullet = _tankView.Tank.Shoot(_gameTime);
                     _bullets.Add(bullet);
-
+                    OnAction?.Invoke(SoundAction.Shoot);
                     OnObjectCreated?.Invoke(bullet);
                 }
 
-                RemoteControl();
+                RemoteControl(result_dt);
 
                 CheckCollisions(input);
 
@@ -145,7 +146,7 @@ namespace TankTCP
 
                 foreach (var bullet in _bullets)
                 {
-                    bullet.Update();
+                    bullet.Update(result_dt);
                 }
                 SaveWorld();
             }
@@ -157,7 +158,7 @@ namespace TankTCP
 
                 foreach (var bullet in _bullets)
                 {
-                    bullet.Update();
+                    bullet.Update(result_dt);
                 }
             }
         }
@@ -167,15 +168,15 @@ namespace TankTCP
             _remotedKeys = keys;
         }
 
-        public void RemoteControl()
+        public void RemoteControl(double dt)
         {
             if (_remotedKeys.Contains("W"))
             {
-                _enemyTankView.Tank.MoveForward();
+                _enemyTankView.Tank.MoveForward(dt);
             }
             if (_remotedKeys.Contains("S"))
             {
-                _enemyTankView.Tank.MoveBackward();
+                _enemyTankView.Tank.MoveBackward(dt);
             }
             if (_remotedKeys.Contains("A"))
             {
@@ -203,7 +204,7 @@ namespace TankTCP
             {
                 var bullet = _enemyTankView.Tank.Shoot(_gameTime);
                 _bullets.Add(bullet);
-
+                OnAction?.Invoke(SoundAction.Shoot);
                 OnObjectCreated?.Invoke(bullet);
             }
         }
@@ -217,12 +218,18 @@ namespace TankTCP
                 if (obj.AttachType == AttachType.Host && obj.Type == GameObjectType.Tank)
                 {
                     _tankView.Tank.Apply(obj);
-                    _tankView.SyncHealthBars();
+                    if (_tankView.SyncHealthBars())
+                    {
+                        OnAction?.Invoke(SoundAction.Hit);
+                    }
                 }
                 else if (obj.AttachType == AttachType.Client && obj.Type == GameObjectType.Tank)
                 {
                     _enemyTankView.Tank.Apply(obj);
-                    _enemyTankView.SyncHealthBars();
+                    if (_enemyTankView.SyncHealthBars())
+                    {
+                        OnAction?.Invoke(SoundAction.Hit);
+                    }
                 }
                 else if (obj.Type == GameObjectType.Bullet)
                 {
@@ -248,6 +255,12 @@ namespace TankTCP
             }
         }
 
+        public void DestroyLastBullet(int id)
+        {
+            var bullet = _bullets.Where(b => b.Id == id).FirstOrDefault();
+            _bullets.Remove(bullet);
+            OnGameObjectDestroy?.Invoke(bullet);
+        }
 
         public TankView GetTankView(AttachType attachType)
         {
@@ -378,23 +391,22 @@ namespace TankTCP
 
         private void TankBulletCollision(Tank tank, Bullet bullet)
         {
+            var tank_dto = new CollisionDto(tank.Angle, tank.BodyPosition, tank.Object);
             foreach (var pos in bullet.GetCorners(bullet.Angle, bullet.Position))
             {
-                if (IsCollider(bullet.Position,
-                    point_min: tank.BodyPosition,
-                    point_max: new Point(tank.BodyPosition.X + tank.Width,
-                                        tank.BodyPosition.Y + tank.Height)
-                    ) && bullet.AttachType != tank.AttachType)
+                var bul_dto = new CollisionDto(bullet.Angle, bullet.GetCenterPos(bullet.Position), bullet.Object);
+                if (IsCollision(tank_dto,bul_dto) && bullet.AttachType != tank.AttachType)
                 {
                     _bullets.Remove(bullet);
                     OnGameObjectDestroy?.Invoke(bullet);
                     tank.Hit();
+                    OnAction?.Invoke(SoundAction.Hit);
                     if (tank.Health == 0)
                     {
-
+                        OnAction?.Invoke(SoundAction.Destroy);
                         OnTankDestroy?.Invoke(new SendedDto()
                         {
-                            gameObjects = { new GameObjectDto() { Id = -67, AttachType = tank.AttachType,
+                            gameObjects = { new GameObjectDto() { Id = bullet.Id, AttachType = tank.AttachType,
                                 Position = new Point(tank.BodyPosition.X - tank.Width / 2,tank.BodyPosition.Y - tank.Height / 2) } }
                         });
                     }
@@ -438,10 +450,59 @@ namespace TankTCP
                 TankBulletCollision(_enemyTankView.Tank, bullet);
             }
 
+            CheckTanksCollision(_tankView.Tank, _enemyTankView.Tank, input);
+
 
             CheckTankOffScreen(_tankView.Tank, input);
             CheckTankOffScreen(_enemyTankView.Tank, input);
             CheckBulletsOffScreen(bullets);
+        }
+
+        private void CheckTanksCollision(Tank tank,Tank enemyTank,InputManager input)
+        {
+            var t_def = new CollisionDto(tank.Angle, tank.GetCenterPos(tank.NextBodyPosition), tank.Object);
+            var en_def = new CollisionDto(enemyTank.Angle,enemyTank.GetCenterPos(enemyTank.NextBodyPosition),enemyTank.Object);
+            var t_collisX = new CollisionDto(tank.Angle,
+                tank.GetCenterPos(new Point(tank.NextBodyPosition.X,tank.BodyPosition.Y)), tank.Object);
+            var t_collisY = new CollisionDto(tank.Angle,
+                tank.GetCenterPos(new Point(tank.BodyPosition.X, tank.NextBodyPosition.Y)), tank.Object);
+            var en_collisX = new CollisionDto(enemyTank.Angle,
+                enemyTank.GetCenterPos(new Point(enemyTank.NextBodyPosition.X,enemyTank.BodyPosition.Y)),enemyTank.Object);
+            var en_collisY = new CollisionDto(enemyTank.Angle,
+                enemyTank.GetCenterPos(new Point(enemyTank.BodyPosition.X, enemyTank.NextBodyPosition.Y)), enemyTank.Object);
+
+            if (IsCollision(t_collisX, en_def))
+            {
+                if(input.IsPressed(Key.A) || input.IsPressed(Key.D))
+                {
+                    tank.ResetAngle();
+                }
+                tank.ReturnX();
+            }
+            if(IsCollision(t_collisY, en_def))
+            {
+                if (input.IsPressed(Key.A) || input.IsPressed(Key.D))
+                {
+                    tank.ResetAngle();
+                }
+                tank.ReturnY();
+            }
+            if (IsCollision(t_def, en_collisX))
+            {
+                if(_remotedKeys.Contains("A") || _remotedKeys.Contains("D"))
+                {
+                    enemyTank.ResetAngle();
+                }
+                enemyTank.ReturnX();
+            }
+            if (IsCollision(t_def, en_collisY))
+            {
+                if (_remotedKeys.Contains("A") || _remotedKeys.Contains("D"))
+                {
+                    enemyTank.ResetAngle();
+                }
+                enemyTank.ReturnY();
+            }
         }
 
         private void CheckTankOffScreen(Tank tank, InputManager input)
@@ -542,39 +603,39 @@ namespace TankTCP
                    point1.Y >= point_min.Y && point1.Y <= point_max.Y;
         }
 
-        //public bool IsCollision(CollisionDto obj1,CollisionDto obj2)
-        //{
-        //    var (angle1, center1, half_w1, half_h1) = obj1;
-        //    var (angle2, center2, half_w2, half_h2) = obj2;
+        public bool IsCollision(CollisionDto obj1, CollisionDto obj2)
+        {
+            var (angle1, center1, half_w1, half_h1) = obj1;
+            var (angle2, center2, half_w2, half_h2) = obj2;
 
-        //    Point u1 = new Point(Math.Cos(angle1 * 180 / Math.PI),Math.Sin(angle1 * 180 / Math.PI));
-        //    Point v1 = new Point(-Math.Sin(angle1 * 180 / Math.PI), Math.Cos(angle1 * 180 / Math.PI));
-        //    Point u2 = new Point(Math.Cos(angle2 * 180 / Math.PI), Math.Sin(angle2 * 180 / Math.PI));
-        //    Point v2 = new Point(-Math.Sin(angle2 * 180 / Math.PI), Math.Cos(angle2 * 180 / Math.PI));
+            Point u1 = new Point(Math.Cos(angle1 / 180 * Math.PI), Math.Sin(angle1 / 180 * Math.PI));
+            Point v1 = new Point(-Math.Sin(angle1 / 180 * Math.PI), Math.Cos(angle1 / 180 * Math.PI));
+            Point u2 = new Point(Math.Cos(angle2 / 180 * Math.PI), Math.Sin(angle2 / 180 * Math.PI));
+            Point v2 = new Point(-Math.Sin(angle2 / 180 * Math.PI), Math.Cos(angle2 / 180 * Math.PI));
 
-        //    var axis = new List<Point>() { u1, v1, u2, v2 };
+            var axis = new List<Point>() { u1, v1, u2, v2 };
 
-        //    for(int i = 0;i < axis.Count; i++)
-        //    {
-        //        var d = axis[i];
+            for (int i = 0; i < axis.Count; i++)
+            {
+                var d = axis[i];
 
-        //        double plane_c1 = d.X * center1.X + d.Y * center1.Y;
-        //        double radius1 = half_w1 * Math.Abs(d.X * u1.X + d.Y * u1.Y) + 
-        //                         half_h1 * Math.Abs(d.X * v1.X + d.Y * v1.Y);
-        //        var plane1 = new Point(plane_c1 - radius1, plane_c1 + radius1);
+                double plane_c1 = d.X * center1.X + d.Y * center1.Y;
+                double radius1 = half_w1 * Math.Abs(d.X * u1.X + d.Y * u1.Y) +
+                                 half_h1 * Math.Abs(d.X * v1.X + d.Y * v1.Y);
+                var plane1 = new Point(plane_c1 - radius1, plane_c1 + radius1);
 
-        //        double plane_c2 = d.X * center2.X + d.Y * center2.Y;
-        //        double radius2 = half_w2 * Math.Abs(d.X * u2.X + d.Y * u2.Y) +
-        //                         half_h2 * Math.Abs(d.X * v2.X + d.Y * v2.Y);
-        //        var plane2 = new Point(plane_c2 - radius2, plane_c2 + radius2);
+                double plane_c2 = d.X * center2.X + d.Y * center2.Y;
+                double radius2 = half_w2 * Math.Abs(d.X * u2.X + d.Y * u2.Y) +
+                                 half_h2 * Math.Abs(d.X * v2.X + d.Y * v2.Y);
+                var plane2 = new Point(plane_c2 - radius2, plane_c2 + radius2);
 
-        //        if(plane1.X > plane2.Y || plane1.Y < plane2.X)
-        //        {
-        //            return false;
-        //        }
-        //    }
+                if (plane1.X > plane2.Y || plane1.Y < plane2.X)
+                {
+                    return false;
+                }
+            }
 
-        //    return true;
-        //}
+            return true;
+        }
     }
 }

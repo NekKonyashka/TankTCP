@@ -119,7 +119,7 @@ namespace TankTCP
                 }
 
                 SendedDto dto = JsonSerializer.Deserialize<SendedDto>(line);
-                if (dto?.gameObjects[0].Id == -67)
+                if (dto?.DtoType == DtoType.TankDestroy)
                 {
                     OnTankDestroyed?.Invoke(dto);
                 }

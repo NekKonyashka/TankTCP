@@ -15,7 +15,7 @@ namespace TankTCP
 {
     public class Tank : GameObject
     {
-        private const double DEFAULT_TANK_WIDTH = 100;
+        private const double DEFAULT_TANK_WIDTH = 90;
         private const double DEFAULT_TANK_HEIGHT = 70;
 
         public bool InMove = false;
@@ -23,7 +23,7 @@ namespace TankTCP
         private byte _health = 3;
         private double _reloadTime = 5;
         public double ReloadTime => _reloadTime;
-        private double _speed = 1.5;
+        private double _speed = 80;
         private double _rotationSpeed = 1.25;
         public double PrevAngle { get; private set; }
         public byte Health => _health;
@@ -33,7 +33,7 @@ namespace TankTCP
         public Point BodyPosition => new Point(Position.X, Position.Y + BodyOffsetY);
         public Point NextBodyPosition => new Point(NextPosition.X, NextPosition.Y + BodyOffsetY);
 
-        public Tank(Point pos, AttachType attachType, Brush fill) : base(pos, attachType)
+        public Tank(Point pos, AttachType attachType,double angle, Brush fill) : base(pos, attachType,angle)
         {
             _width = ObjectWidthCef * DEFAULT_TANK_WIDTH;
             _height = ObjectHeightCef * DEFAULT_TANK_HEIGHT;
@@ -44,24 +44,24 @@ namespace TankTCP
             _object.Height = _height;
         }
 
-        public void MoveForward()
+        public void MoveForward(double dt)
         {
             PrevAngle = Angle;
             double translateX = Math.Cos(Angle / 180 * Math.PI);
             double translateY = Math.Sin(Angle / 180 * Math.PI);
 
-            _nextPosition.X -= translateX * _speed;
-            _nextPosition.Y -= translateY * _speed;
+            _nextPosition.X -= translateX * _speed * dt;
+            _nextPosition.Y -= translateY * _speed * dt;
         }
 
-        public void MoveBackward()
+        public void MoveBackward(double dt)
         {
             PrevAngle = Angle;
             double translateX = Math.Cos(Angle / 180 * Math.PI);
             double translateY = Math.Sin(Angle / 180 * Math.PI);
 
-            _nextPosition.X += translateX * _speed;
-            _nextPosition.Y += translateY * _speed;
+            _nextPosition.X += translateX * _speed * dt;
+            _nextPosition.Y += translateY * _speed * dt;
         }
 
         public void RotateLeft()
@@ -97,7 +97,7 @@ namespace TankTCP
 
             return time - _lastTimeShooting > _reloadTime;
         }
-        public override void Update()
+        public void Update()
         {
             _position = _nextPosition;
         }
@@ -126,6 +126,11 @@ namespace TankTCP
         public void ReturnY()
         {
             _nextPosition.Y = _position.Y;
+        }
+
+        public void ResetAngle()
+        {
+            _rotateTransform.Angle = PrevAngle;
         }
 
         public void Hit()

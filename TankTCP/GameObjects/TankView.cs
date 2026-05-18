@@ -62,7 +62,7 @@ namespace TankTCP
             {
                 Width = tank.Width,
                 Height = tank.Height + _reloadBar.Margin.Top + _reloadBar.Height +
-                                       _healthBars[0].Height + 4
+                                       _healthBars[0].Height + _tank.Width * 0.1
             };
 
             _tank.Object.VerticalAlignment = VerticalAlignment.Bottom;
@@ -99,15 +99,16 @@ namespace TankTCP
             }
         }
 
-        public void SyncHealthBars()
+        public bool SyncHealthBars()
         {
-            while (_healthBars.Count > _tank.Health)
+            if(_healthBars.Count != _tank.Health)
             {
                 var bar = _healthBars[_healthBars.Count - 1];
                 _grid.Children.Remove(bar);
                 _healthBars.Remove(bar);
+                return true;
             }
+            return false;
         }
-
     }
 }

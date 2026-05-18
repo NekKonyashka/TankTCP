@@ -39,10 +39,10 @@ namespace TankTCP
         public MainWindow()
         {
             InitializeComponent();
-            //WindowState = WindowState.Maximized;
-            //Width = SystemParameters.WorkArea.Width;
-            //Height = SystemParameters.WorkArea.Height;
-            //ResizeMode = ResizeMode.NoResize;
+            WindowState = WindowState.Maximized;
+            Width = SystemParameters.WorkArea.Width;
+            Height = SystemParameters.WorkArea.Height;
+            ResizeMode = ResizeMode.NoResize;
 
             _widthCef = Width / MAX_WIDTH;
             _heightCef = Height / MAX_HEIGHT;
@@ -62,6 +62,7 @@ namespace TankTCP
             gameManager.OnTapToSend += GameManager_OnKeySend;
             gameManager.OnTankDestroy += GameManager_OnTankDestroy;
             gameManager.OnTankCreated += GameManager_OnTankCreated;
+            gameManager.OnAction += GameManager_OnAction;
 
             tcpManager.OnPlayerConnected += TcpManager_OnPlayerConnected;
             tcpManager.OnGameStart += TcpManager_OnGameStart;
@@ -73,6 +74,12 @@ namespace TankTCP
             animationManager.OnAnimationEnd += AnimationManager_OnAnimationEnd;
 
             NameInput.Text = "Аноним" + new Random().Next();
+            Input.Text = "127.0.0.1";
+        }
+
+        private void GameManager_OnAction(SoundAction obj)
+        {
+            soundManager.DoAction(obj);
         }
 
         private void AnimationManager_OnAnimationEnd(Image obj)
@@ -101,6 +108,7 @@ namespace TankTCP
         {
             string name = obj.gameObjects[0].AttachType == AttachType.Client ? _username : _clientName;
             obj.UserName = name;
+            obj.DtoType = DtoType.TankDestroy;
             tcpManager.SendTankDestroyMessage(obj);
             GameCanvas.Children.Remove(gameManager.GetTankView(obj.gameObjects[0].AttachType).Grid);
             animationManager.Start(obj.gameObjects[0].Position);
@@ -111,8 +119,8 @@ namespace TankTCP
 
         private void EndGame(string username)
         {
+            soundManager.EndGame();
             GameCanvas.Children.Clear();
-            soundManager.DoAction(SoundAction.Destroy);
             Menu.Visibility = Visibility.Visible;
             DefeatAndWInGrid.Visibility = Visibility.Visible;
             WInnerName.Text = username;
@@ -125,7 +133,9 @@ namespace TankTCP
         private async void TcpManager_OnTankDestroyed(SendedDto obj)
         {
             tcpManager.GameEnded = true;
+            soundManager.DoAction(SoundAction.Destroy);
             GameCanvas.Children.Remove(gameManager.GetTankView(obj.gameObjects[0].AttachType).Grid);
+            gameManager.DestroyLastBullet(obj.gameObjects[0].Id);
             animationManager.Start(obj.gameObjects[0].Position);
             UnsubscribeGameLoop();
             await animationManager.TaskCompletionSource.Task;
@@ -154,6 +164,7 @@ namespace TankTCP
 
         private void GameManager_OnSended(SendedDto obj)
         {
+            obj.DtoType = DtoType.None;
             tcpManager.SendWorldStateAsync(obj);
         }
 
@@ -180,7 +191,6 @@ namespace TankTCP
             Canvas.SetLeft(spawnObject, obj.Position.X);
             Canvas.SetTop(spawnObject, obj.Position.Y);
             Canvas.SetZIndex(spawnObject, -1);
-            soundManager.DoAction(SoundAction.Shoot);
 
             UpdateLayout();
             GameCanvas.UpdateLayout();
@@ -247,6 +257,7 @@ namespace TankTCP
 
         private void LoadGame()
         {
+            soundManager.StartGame();
             tcpManager.GameEnded = false;
             Menu.Visibility = Visibility.Hidden;
             DefeatAndWInGrid.Visibility = Visibility.Hidden;
