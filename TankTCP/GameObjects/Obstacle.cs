@@ -18,8 +18,8 @@ namespace TankTCP
         private const double DEFAULT_OBSTACLE_HEIGHT = 125;
         public Obstacle(Point pos) : base(pos)
         {
-            _width = DEFAULT_OBSTACLE_WIDTH * ObjectWidthCef;
-            _height = DEFAULT_OBSTACLE_HEIGHT * ObjectHeightCef;
+            _width = DEFAULT_OBSTACLE_WIDTH;
+            _height = DEFAULT_OBSTACLE_HEIGHT;
 
             _object = new Rectangle()
             {

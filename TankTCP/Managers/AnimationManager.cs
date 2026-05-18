@@ -24,7 +24,7 @@ namespace TankTCP
         public event Action<Image,Point> OnAnimationStart;
         public event Action<Image> OnAnimationEnd;
 
-        public AnimationManager(double wCef,double hCef)
+        public AnimationManager()
         {
             _sprite = new BitmapImage(new Uri("./res/ExplosionSprite.png",UriKind.Relative));
             _frameWidth = _sprite.Width / 2;
@@ -32,8 +32,8 @@ namespace TankTCP
 
             _currentFrame = new Image()
             {
-                Width = 200 * wCef,
-                Height = 200 * hCef,
+                Width = 200,
+                Height = 200,
                 Stretch = Stretch.Fill,
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center,

@@ -21,9 +21,6 @@ namespace TankTCP
         public const double MAX_WIDTH = 1920;
         public const double MAX_HEIGHT = 1080;
 
-        private double _widthCef;
-        private double _heightCef;
-
         private string _username;
         private string _clientName;
 
@@ -39,22 +36,13 @@ namespace TankTCP
         public MainWindow()
         {
             InitializeComponent();
-            WindowState = WindowState.Maximized;
-            Width = SystemParameters.WorkArea.Width;
-            Height = SystemParameters.WorkArea.Height;
-            ResizeMode = ResizeMode.NoResize;
-
-            _widthCef = Width / MAX_WIDTH;
-            _heightCef = Height / MAX_HEIGHT;
+            ResizeMode = ResizeMode.CanResize;
 
             gameManager = new GameManager();
             inputManager = new InputManager();
             tcpManager = new TcpManager();
             soundManager = new SoundManager();
-            animationManager = new AnimationManager(_widthCef, _heightCef);
-
-            StandartObject.ObjectWidthCef = _widthCef;
-            StandartObject.ObjectHeightCef = _heightCef;
+            animationManager = new AnimationManager();
 
             gameManager.OnObjectCreated += GameManager_OnObjectCreated;
             gameManager.OnGameObjectDestroy += GameManager_OnGameObjectDestroy;
@@ -262,17 +250,17 @@ namespace TankTCP
             Menu.Visibility = Visibility.Hidden;
             DefeatAndWInGrid.Visibility = Visibility.Hidden;
             gameManager.PrepareNewMatch();
-            gameManager.SpawnTank(new Point(200 * _widthCef, 100 * _heightCef));
-            gameManager.SpawnEnemyTank(new Point(1720 * _widthCef, 800 * _heightCef));
+            gameManager.SpawnTank(new Point(200, 100));
+            gameManager.SpawnEnemyTank(new Point(1620, 800));
             SubscribeGameLoop();
 
-            var obst = gameManager.CreateObstacle(new Point(400 * _widthCef, 200 * _heightCef));
+            var obst = gameManager.CreateObstacle(new Point(400, 200));
             GameCanvas.Children.Add(obst.Object);
             Canvas.SetTop(obst.Object, obst.Position.Y);
             Canvas.SetLeft(obst.Object, obst.Position.X);
             Canvas.SetZIndex(obst.Object, -1);
 
-            var obst2 = gameManager.CreateObstacle(new Point(1520 * _widthCef, 700 * _heightCef));
+            var obst2 = gameManager.CreateObstacle(new Point(1520, 700));
             GameCanvas.Children.Add(obst2.Object);
             Canvas.SetTop(obst2.Object, obst2.Position.Y);
             Canvas.SetLeft(obst2.Object, obst2.Position.X);
@@ -310,7 +298,7 @@ namespace TankTCP
             if (!string.IsNullOrEmpty(NameInput.Text) && NameInput.Text.Length <= 32)
             {
                 _username = NameInput.Text;
-                Name.Visibility = Visibility.Hidden;
+                NamePanel.Visibility = Visibility.Hidden;
                 Buttons.Visibility = Visibility.Visible;
             }
         }

@@ -25,8 +25,8 @@ namespace TankTCP
         public Bullet(Point pos, AttachType attachType, double angle) : base(pos, attachType, angle)
         {
             _id = counter++;
-            _width = ObjectWidthCef * DEFAULT_BULLET_WIDTH;
-            _height = ObjectHeightCef * DEFAULT_BULLET_HEIGHT;
+            _width = DEFAULT_BULLET_WIDTH;
+            _height = DEFAULT_BULLET_HEIGHT;
             _object.Fill = new ImageBrush(new BitmapImage(new Uri("./res/Bullet.png", UriKind.Relative)));
             _object.Width = _width;
             _object.Height = _height;

@@ -35,8 +35,8 @@ namespace TankTCP
 
         public Tank(Point pos, AttachType attachType,double angle, Brush fill) : base(pos, attachType,angle)
         {
-            _width = ObjectWidthCef * DEFAULT_TANK_WIDTH;
-            _height = ObjectHeightCef * DEFAULT_TANK_HEIGHT;
+            _width = DEFAULT_TANK_WIDTH;
+            _height = DEFAULT_TANK_HEIGHT;
             _nextPosition = pos;
             PrevAngle = Angle;
             _object.Fill = fill;

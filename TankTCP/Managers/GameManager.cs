@@ -518,8 +518,7 @@ namespace TankTCP
                 if (!IsCollider(
                     new Point(next_points[i].X - dif_x, points[i].Y),
                     point_min: new Point(0, 0),
-                    point_max: new Point(SystemParameters.WorkArea.Width,
-                                        SystemParameters.WorkArea.Height)
+                    point_max: new Point(MainWindow.MAX_WIDTH, MainWindow.MAX_HEIGHT)
                     ))
                 {
                     if (tank.AttachType == AttachType.Host)
@@ -548,8 +547,7 @@ namespace TankTCP
                 if (!IsCollider(
                     new Point(next_points[i].X, points[i].Y - dif_y),
                     point_min: new Point(0, 0),
-                    point_max: new Point(SystemParameters.WorkArea.Width,
-                                        SystemParameters.WorkArea.Height)
+                    point_max: new Point(MainWindow.MAX_WIDTH, MainWindow.MAX_HEIGHT)
                     ))
                 {
 
@@ -584,10 +582,9 @@ namespace TankTCP
         {
             foreach (var bullet in bullets)
             {
-                if (!IsCollider(bullet.Position,
-                    point_min: new Point(0, 0),
-                    point_max: new Point(SystemParameters.WorkArea.Width,
-                                        SystemParameters.WorkArea.Height)))
+                if(!IsCollider(bullet.Position,
+                    point_min:new Point(0,0),
+                    point_max: new Point(MainWindow.MAX_WIDTH, MainWindow.MAX_HEIGHT)))
                 {
                     _bullets.Remove(bullet);
                     OnGameObjectDestroy?.Invoke(bullet);

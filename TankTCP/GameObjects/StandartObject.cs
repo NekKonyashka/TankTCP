@@ -10,9 +10,6 @@ namespace TankTCP.GameObjects
 {
     public abstract class StandartObject
     {
-        public static double ObjectWidthCef;
-        public static double ObjectHeightCef;
-
         protected Rectangle _object;
         public Rectangle Object => _object;
         protected Point _position;

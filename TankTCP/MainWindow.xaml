@@ -5,44 +5,86 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:TankTCP"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800" KeyDown="GameWindow_KeyDown" KeyUp="GameWindow_KeyUp">
+        Title="TankTCP"
+        MinWidth="640" MinHeight="360"
+        WindowStartupLocation="CenterScreen"
+        WindowState="Maximized"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        KeyDown="GameWindow_KeyDown" KeyUp="GameWindow_KeyUp" Background="Black">
     <Grid>
-        <Canvas x:Name="GameCanvas">
-            <Canvas.Background>
-                <ImageBrush ImageSource="/res/Background.jpg"/>
-            </Canvas.Background>
-        </Canvas>
+        <Viewbox x:Name="GameViewbox" Stretch="Uniform" OpacityMask="White">
+            <Canvas x:Name="GameCanvas" Width="1920" Height="1080">
+                <Canvas.Background>
+                    <ImageBrush ImageSource="/res/Background.jpg" Stretch="UniformToFill"/>
+                </Canvas.Background>
+            </Canvas>
+        </Viewbox>
 
-        <Grid x:Name="Menu" Background="White" Panel.ZIndex="5">
-            <Grid x:Name="Name">
-                <TextBlock TextWrapping="Wrap" Text="Введите свое имя:" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,100" FontSize="20"/>
-                <TextBox x:Name="NameInput" TextWrapping="Wrap" Width="120" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                <Button x:Name="NameEnter" Content="Ввод" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,100,0,0" Click="NameEnter_Click"/>
-            </Grid>
-            <Grid x:Name="Buttons" Visibility="Hidden">
-                <Button x:Name="ServerButton" Content="Host" Width="200" Height="100" HorizontalAlignment="Center" VerticalAlignment="Center" Canvas.Left="300" Canvas.Top="53" FontSize="48" FontFamily="Bradley Hand ITC" Click="ServerButton_Click" Margin="0,0,0,200"/>
-                <Button x:Name="ClientButton" Content="Client" Width="200" Height="100" Canvas.Left="300" Canvas.Top="294" FontSize="48" FontFamily="Bradley Hand ITC" HorizontalAlignment="Center" VerticalAlignment="Center" Click="ClientButton_Click" Margin="0,200,0,0"/>
-            </Grid>
-            <Grid x:Name="Waiting_Server" Visibility="Hidden">
-                <TextBlock x:Name="Players" TextWrapping="Wrap" Text="1" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="24" Margin="0,0,25,0"/>
-                <TextBlock TextWrapping="Wrap" Text="/ 2" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="24" Margin="25,0,0,0"/>
-                <TextBlock TextWrapping="Wrap" Text="Игроки:" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="24" Margin="0,0,0,100"/>
-                <Button x:Name="Start" Content="Начать" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,200,0,0" Width="100" Height="50" FontSize="18" IsEnabled="False" Click="Start_Click"/>
-            </Grid>
-            <Grid x:Name="MenuOfInput" Visibility="Hidden">
-                <TextBox x:Name="Input" TextWrapping="Wrap" Width="150" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                <TextBlock TextWrapping="Wrap" Text="Введи IP хоста" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,100" FontSize="24"/>
-                <Button x:Name="ButtonOfInput" Content="Ввод" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,100,0,0" Width="50" Height="30" Click="ButtonOfInput_Click"/>
-            </Grid>
-            <Grid x:Name="Waiting_Client" Visibility="Hidden">
-                <TextBlock TextWrapping="Wrap" Text="Ждем..." HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="24" Margin="0,0,25,0"/>
-            </Grid>
-            <Grid x:Name="DefeatAndWInGrid" Visibility="Hidden">
-                <TextBlock TextWrapping="Wrap" Text="ИГРА ОКОНЧЕНА" Margin="0,0,0,200" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="18"/>
-                <Button x:Name="RestartButton" Content="Restart" HorizontalAlignment="Center" VerticalAlignment="Center" Width="75" Height="75" Click="RestartButton_Click" Visibility="Hidden"/>
-                <TextBlock TextWrapping="Wrap" Text="Победил:" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="18" Margin="0,0,100,150"/>
-                <TextBlock x:Name="WInnerName" TextWrapping="Wrap" HorizontalAlignment="Left" VerticalAlignment="Top" FontSize="18" Margin="399,130,0,0"/>
-            </Grid>
+        <Grid x:Name="Menu" Panel.ZIndex="5">
+            <Grid.Background>
+                <SolidColorBrush Color="White" Opacity="0.97"/>
+            </Grid.Background>
+            <Viewbox Stretch="Uniform">
+                <Grid Width="800" Height="450">
+                    <Grid x:Name="NamePanel">
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <TextBlock Text="Введите свое имя:" TextWrapping="Wrap"
+                                       HorizontalAlignment="Center" FontSize="20" Margin="0,0,0,16"/>
+                            <TextBox x:Name="NameInput" TextWrapping="Wrap" Width="200" HorizontalAlignment="Center"/>
+                            <Button x:Name="NameEnter" Content="Ввод" Width="80" Height="32"
+                                    HorizontalAlignment="Center" Margin="0,16,0,0" Click="NameEnter_Click"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid x:Name="Buttons" Visibility="Hidden">
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Button x:Name="ServerButton" Content="Host" Width="200" Height="100"
+                                    FontSize="48" FontFamily="Bradley Hand ITC" Click="ServerButton_Click"
+                                    Margin="0,0,0,24"/>
+                            <Button x:Name="ClientButton" Content="Client" Width="200" Height="100"
+                                    FontSize="48" FontFamily="Bradley Hand ITC" Click="ClientButton_Click"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid x:Name="Waiting_Server" Visibility="Hidden">
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <TextBlock Text="Игроки:" HorizontalAlignment="Center" FontSize="24" Margin="0,0,0,12"/>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,24">
+                                <TextBlock x:Name="Players" Text="1" FontSize="24"/>
+                                <TextBlock Text="/ 2" FontSize="24"/>
+                            </StackPanel>
+                            <Button x:Name="Start" Content="Начать" Width="100" Height="50" FontSize="18"
+                                    IsEnabled="False" Click="Start_Click"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid x:Name="MenuOfInput" Visibility="Hidden">
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <TextBlock Text="Введи IP хоста" HorizontalAlignment="Center" FontSize="24" Margin="0,0,0,16"/>
+                            <TextBox x:Name="Input" TextWrapping="Wrap" Width="200" HorizontalAlignment="Center"/>
+                            <Button x:Name="ButtonOfInput" Content="Ввод" Width="80" Height="32"
+                                    HorizontalAlignment="Center" Margin="0,16,0,0" Click="ButtonOfInput_Click"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid x:Name="Waiting_Client" Visibility="Hidden">
+                        <TextBlock Text="Ждем..." HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="24"/>
+                    </Grid>
+
+                    <Grid x:Name="DefeatAndWInGrid" Visibility="Hidden">
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <TextBlock Text="ИГРА ОКОНЧЕНА" HorizontalAlignment="Center" FontSize="24" Margin="0,0,0,16"/>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,24">
+                                <TextBlock Text="Победил:" FontSize="18"/>
+                                <TextBlock x:Name="WInnerName" FontSize="18" Margin="8,0,0,0"/>
+                            </StackPanel>
+                            <Button x:Name="RestartButton" Content="Restart" Width="75" Height="75"
+                                    Click="RestartButton_Click" Visibility="Hidden"/>
+                        </StackPanel>
+                    </Grid>
+                </Grid>
+            </Viewbox>
         </Grid>
     </Grid>
 </Window>
